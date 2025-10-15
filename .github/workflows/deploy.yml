@@ -1,0 +1,78 @@
+name: Deploy to AWS
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-2
+  STACK_NAME: patchpilot-prod
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r backend/requirements.txt
+        pip install aws-sam-cli
+
+    - name: Run tests
+      run: |
+        pytest backend/tests/ -v
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+        aws-region: ${{ env.AWS_REGION }}
+    
+    - name: Build SAM application
+      run: |
+        sam build
+    
+    - name: Deploy SAM application
+      run: |
+        sam deploy \
+          --no-confirm-changeset \
+          --no-fail-on-empty-changeset \
+          --stack-name ${{ env.STACK_NAME }} \
+          --s3-bucket ${{ secrets.AWS_SAM_BUCKET }} \
+          --capabilities CAPABILITY_IAM \
+          --region ${{ env.AWS_REGION }}
+    
+    - name: Get deployment outputs
+      run: |
+        aws cloudformation describe-stacks \
+          --stack-name ${{ env.STACK_NAME }} \
+          --region ${{ env.AWS_REGION }} \
+          --query 'Stacks[0].Outputs' \
+          --output table
+    
+    - name: Notify deployment
+      if: success()
+      run: |
+        echo "✅ Deployment successful!"
+        echo "Stack: ${{ env.STACK_NAME }}"
+        echo "Region: ${{ env.AWS_REGION }}"
+    
+    - name: Notify failure
+      if: failure()
+      run: |
+        echo "❌ Deployment failed!"
+        exit 1
+

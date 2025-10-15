@@ -1,0 +1,235 @@
+{
+  "Comment": "PatchPilot - Phased Patch Orchestration with Health Checks and Rollback",
+  "StartAt": "ExecuteCanaryBatch",
+  "States": {
+    "ExecuteCanaryBatch": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:patch-pilot-execute-batch",
+      "Parameters": {
+        "batch_id": "canary",
+        "device_ids.$": "$.canary_device_ids",
+        "patch_ids.$": "$.patch_ids"
+      },
+      "ResultPath": "$.canary_result",
+      "Next": "WaitAfterCanary",
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "CanaryFailed"
+        }
+      ]
+    },
+    "WaitAfterCanary": {
+      "Type": "Wait",
+      "Seconds": 60,
+      "Next": "CheckCanaryHealth"
+    },
+    "CheckCanaryHealth": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:patch-pilot-health-check",
+      "Parameters": {
+        "batch_id": "canary",
+        "device_ids.$": "$.canary_device_ids",
+        "health_threshold_percent": 95.0
+      },
+      "ResultPath": "$.canary_health",
+      "Next": "CanaryHealthDecision",
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "CanaryHealthCheckFailed"
+        }
+      ]
+    },
+    "CanaryHealthDecision": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.canary_health.proceed",
+          "BooleanEquals": true,
+          "Next": "ExecuteBatch1"
+        }
+      ],
+      "Default": "RollbackCanary"
+    },
+    "RollbackCanary": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:patch-pilot-rollback",
+      "Parameters": {
+        "batch_id": "canary",
+        "device_ids.$": "$.canary_device_ids"
+      },
+      "ResultPath": "$.canary_rollback",
+      "Next": "CanaryRollbackFailed"
+    },
+    "CanaryRollbackFailed": {
+      "Type": "Fail",
+      "Error": "CanaryRollbackFailed",
+      "Cause": "Canary batch health check failed and rollback was initiated"
+    },
+    "CanaryFailed": {
+      "Type": "Fail",
+      "Error": "CanaryExecutionFailed",
+      "Cause": "Canary batch execution failed"
+    },
+    "CanaryHealthCheckFailed": {
+      "Type": "Fail",
+      "Error": "CanaryHealthCheckFailed",
+      "Cause": "Canary batch health check encountered an error"
+    },
+    "ExecuteBatch1": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:patch-pilot-execute-batch",
+      "Parameters": {
+        "batch_id": "batch-1",
+        "device_ids.$": "$.batch1_device_ids",
+        "patch_ids.$": "$.patch_ids"
+      },
+      "ResultPath": "$.batch1_result",
+      "Next": "WaitAfterBatch1",
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "Batch1Failed"
+        }
+      ]
+    },
+    "WaitAfterBatch1": {
+      "Type": "Wait",
+      "Seconds": 120,
+      "Next": "CheckBatch1Health"
+    },
+    "CheckBatch1Health": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:patch-pilot-health-check",
+      "Parameters": {
+        "batch_id": "batch-1",
+        "device_ids.$": "$.batch1_device_ids",
+        "health_threshold_percent": 90.0
+      },
+      "ResultPath": "$.batch1_health",
+      "Next": "Batch1HealthDecision",
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "Batch1HealthCheckFailed"
+        }
+      ]
+    },
+    "Batch1HealthDecision": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.batch1_health.proceed",
+          "BooleanEquals": true,
+          "Next": "ExecuteBatch2"
+        }
+      ],
+      "Default": "RollbackBatch1"
+    },
+    "RollbackBatch1": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:patch-pilot-rollback",
+      "Parameters": {
+        "batch_id": "batch-1",
+        "device_ids.$": "$.batch1_device_ids"
+      },
+      "ResultPath": "$.batch1_rollback",
+      "Next": "Batch1RollbackFailed"
+    },
+    "Batch1RollbackFailed": {
+      "Type": "Fail",
+      "Error": "Batch1RollbackFailed",
+      "Cause": "Batch 1 health check failed and rollback was initiated"
+    },
+    "Batch1Failed": {
+      "Type": "Fail",
+      "Error": "Batch1ExecutionFailed",
+      "Cause": "Batch 1 execution failed"
+    },
+    "Batch1HealthCheckFailed": {
+      "Type": "Fail",
+      "Error": "Batch1HealthCheckFailed",
+      "Cause": "Batch 1 health check encountered an error"
+    },
+    "ExecuteBatch2": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:patch-pilot-execute-batch",
+      "Parameters": {
+        "batch_id": "batch-2",
+        "device_ids.$": "$.batch2_device_ids",
+        "patch_ids.$": "$.patch_ids"
+      },
+      "ResultPath": "$.batch2_result",
+      "Next": "WaitAfterBatch2",
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "Batch2Failed"
+        }
+      ]
+    },
+    "WaitAfterBatch2": {
+      "Type": "Wait",
+      "Seconds": 120,
+      "Next": "CheckBatch2Health"
+    },
+    "CheckBatch2Health": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:patch-pilot-health-check",
+      "Parameters": {
+        "batch_id": "batch-2",
+        "device_ids.$": "$.batch2_device_ids",
+        "health_threshold_percent": 90.0
+      },
+      "ResultPath": "$.batch2_health",
+      "Next": "Batch2HealthDecision",
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "Batch2HealthCheckFailed"
+        }
+      ]
+    },
+    "Batch2HealthDecision": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.batch2_health.proceed",
+          "BooleanEquals": true,
+          "Next": "ExecutionSucceeded"
+        }
+      ],
+      "Default": "RollbackBatch2"
+    },
+    "RollbackBatch2": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:patch-pilot-rollback",
+      "Parameters": {
+        "batch_id": "batch-2",
+        "device_ids.$": "$.batch2_device_ids"
+      },
+      "ResultPath": "$.batch2_rollback",
+      "Next": "Batch2RollbackFailed"
+    },
+    "Batch2RollbackFailed": {
+      "Type": "Fail",
+      "Error": "Batch2RollbackFailed",
+      "Cause": "Batch 2 health check failed and rollback was initiated"
+    },
+    "Batch2Failed": {
+      "Type": "Fail",
+      "Error": "Batch2ExecutionFailed",
+      "Cause": "Batch 2 execution failed"
+    },
+    "Batch2HealthCheckFailed": {
+      "Type": "Fail",
+      "Error": "Batch2HealthCheckFailed",
+      "Cause": "Batch 2 health check encountered an error"
+    },
+    "ExecutionSucceeded": {
+      "Type": "Succeed"
+    }
+  }
+}
+

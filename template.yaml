@@ -1,0 +1,197 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: PatchPilot - Agentic Patch & Vulnerability Orchestrator
+
+Globals:
+  Function:
+    Timeout: 300
+    MemorySize: 512
+    Runtime: python3.9
+    Environment:
+      Variables:
+        AWS_REGION: !Ref AWS::Region
+        DYNAMODB_TABLE_PATCH_RUNS: !Ref PatchRunsTable
+        DYNAMODB_TABLE_PLANS: !Ref PatchPlansTable
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+
+Resources:
+  # DynamoDB Tables
+  PatchRunsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'PatchRuns-${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: patch_run_id
+          AttributeType: S
+        - AttributeName: created_at
+          AttributeType: S
+      KeySchema:
+        - AttributeName: patch_run_id
+          KeyType: HASH
+        - AttributeName: created_at
+          KeyType: RANGE
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+
+  PatchPlansTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'PatchPlans-${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: plan_id
+          AttributeType: S
+        - AttributeName: created_at
+          AttributeType: S
+      KeySchema:
+        - AttributeName: plan_id
+          KeyType: HASH
+        - AttributeName: created_at
+          KeyType: RANGE
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+
+  # Lambda Execution Role
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: DynamoDBAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                Resource:
+                  - !GetAtt PatchRunsTable.Arn
+                  - !GetAtt PatchPlansTable.Arn
+        - PolicyName: BedrockAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                Resource: '*'
+        - PolicyName: SecurityHubAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - securityhub:GetFindings
+                Resource: '*'
+
+  # Lambda Functions
+  WebhookFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub 'patchpilot-webhook-${Environment}'
+      CodeUri: .
+      Handler: src.lambda_handler.webhook_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref PatchPilotApi
+            Path: /webhook/superops
+            Method: POST
+
+  PlanApprovalFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub 'patchpilot-plan-approval-${Environment}'
+      CodeUri: .
+      Handler: src.lambda_handler.plan_approval_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref PatchPilotApi
+            Path: /plan/approve
+            Method: POST
+
+  HealthCheckFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub 'patchpilot-health-check-${Environment}'
+      CodeUri: .
+      Handler: src.lambda_handler.health_check_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref PatchPilotApi
+            Path: /health-check
+            Method: POST
+
+  # API Gateway
+  PatchPilotApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub 'patchpilot-api-${Environment}'
+      StageName: !Ref Environment
+      TracingEnabled: true
+      MethodSettings:
+        - ResourcePath: '/*'
+          HttpMethod: '*'
+          LoggingLevel: INFO
+          DataTraceEnabled: true
+          MetricsEnabled: true
+
+  # CloudWatch Log Group
+  ApiLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/apigateway/patchpilot-${Environment}'
+      RetentionInDays: 30
+
+Outputs:
+  WebhookUrl:
+    Description: Webhook endpoint URL
+    Value: !Sub 'https://${PatchPilotApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/webhook/superops'
+  
+  PlanApprovalUrl:
+    Description: Plan approval endpoint URL
+    Value: !Sub 'https://${PatchPilotApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/plan/approve'
+  
+  PatchRunsTableName:
+    Description: DynamoDB table for patch runs
+    Value: !Ref PatchRunsTable
+  
+  PatchPlansTableName:
+    Description: DynamoDB table for patch plans
+    Value: !Ref PatchPlansTable
+
