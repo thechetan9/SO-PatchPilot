@@ -77,8 +77,8 @@ SO-PatchPilot/
 ├── README.md                  # This file
 ├── LICENSE                    # MIT License
 ├── template.yaml              # AWS SAM template
-├── run-backend.ps1            # PowerShell script to run backend
-└── run-frontend.ps1           # PowerShell script to run frontend
+├── quickstart.ps1             # PowerShell script for quick start
+└── create_dynamodb_tables.py  # DynamoDB setup script
 ```
 
 ## Setup
@@ -92,22 +92,18 @@ SO-PatchPilot/
 
 ### Quick Start (Windows)
 
-**Option 1: Using PowerShell Scripts (Recommended)**
+**Using PowerShell Quick Start Script:**
 
 ```powershell
-# Run backend (Terminal 1)
-.\run-backend.ps1
-
-# Run frontend (Terminal 2)
-.\run-frontend.ps1
+.\quickstart.ps1
 ```
 
-**Option 2: Manual Setup**
+**Or Manual Setup:**
 
 #### 1. Clone the repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/PatchPilot.git
+git clone https://github.com/thechetan9/SO-PatchPilot.git
 cd SO-PatchPilot
 ```
 
@@ -190,13 +186,7 @@ Visit <http://localhost:5000/health> to verify it's running.
 
 #### Test with Sample Webhook
 
-```bash
-# Use the test script
-cd backend
-python ../test_backend.py
-```
-
-Or manually with curl:
+Use curl to test the webhook:
 
 ```bash
 curl -X POST http://localhost:5000/webhook/superops \
@@ -258,17 +248,20 @@ Simulates SuperOps API for demo:
 
 ## AWS Setup
 
-### Prerequisites
+### AWS Prerequisites
 
 - AWS Account with Administrator access
-- AWS Bedrock access enabled (see [ENABLE_BEDROCK.md](ENABLE_BEDROCK.md))
+- AWS Bedrock access enabled (request access to Claude 3.5 Haiku in AWS Console)
 
 ### Quick AWS Setup
 
-1. **Set up credentials** (from AWS Academy or AWS Console):
+1. **Configure AWS credentials** in `backend/.env`:
 
-   ```powershell
-   .\setup-aws-credentials.ps1
+   ```env
+   AWS_ACCESS_KEY_ID=your_access_key
+   AWS_SECRET_ACCESS_KEY=your_secret_key
+   AWS_REGION=us-east-1
+   BEDROCK_MODEL_ID=us.anthropic.claude-3-5-haiku-20241022-v1:0
    ```
 
 2. **Create DynamoDB tables**:
@@ -278,14 +271,9 @@ Simulates SuperOps API for demo:
    ```
 
 3. **Enable Bedrock access**:
-   - Follow instructions in [ENABLE_BEDROCK.md](ENABLE_BEDROCK.md)
-   - Request access to Claude 3.5 Sonnet in AWS Console
-
-4. **Test AWS connection**:
-
-   ```bash
-   python test_aws_connection.py
-   ```
+   - Go to AWS Bedrock Console
+   - Navigate to "Model access"
+   - Request access to Claude 3.5 Haiku
 
 ### AWS Services Used
 
@@ -358,12 +346,11 @@ pytest tests/ -v
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## Documentation
+## Additional Resources
 
-- **Quick Start**: See [QUICKSTART.md](QUICKSTART.md)
-- **Deployment**: See [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md)
-- **Frontend Testing**: See [FRONTEND_TESTING.md](FRONTEND_TESTING.md)
-- **AWS SAM Template**: See [template.yaml](template.yaml)
+- **AWS SAM Template**: See [template.yaml](template.yaml) for Lambda deployment
+- **DynamoDB Setup**: See [create_dynamodb_tables.py](create_dynamodb_tables.py)
+- **Quick Start Script**: See [quickstart.ps1](quickstart.ps1)
 
 ## Support
 
