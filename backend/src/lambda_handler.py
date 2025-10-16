@@ -157,7 +157,10 @@ def health_check_handler(event, context):
         health_threshold = event.get('health_threshold_percent', 95.0)
 
         # Perform health check
-        health_result = orchestrator.check_batch_health(
+        orchestrator_instance = get_orchestrator()
+        if not orchestrator_instance:
+            raise Exception("Failed to initialize orchestrator")
+        health_result = orchestrator_instance.check_batch_health(
             batch_id=batch_id,
             device_ids=device_ids,
             health_threshold_percent=health_threshold
@@ -204,7 +207,10 @@ def rollback_handler(event, context):
         device_ids = event.get('device_ids', [])
 
         # Execute rollback
-        rollback_result = orchestrator.rollback_batch(
+        orchestrator_instance = get_orchestrator()
+        if not orchestrator_instance:
+            raise Exception("Failed to initialize orchestrator")
+        rollback_result = orchestrator_instance.rollback_batch(
             batch_id=batch_id,
             device_ids=device_ids
         )
