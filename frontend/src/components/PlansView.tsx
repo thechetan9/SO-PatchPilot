@@ -41,7 +41,7 @@ export default function PlansView() {
     try {
       setLoading(true);
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-      const response = await fetch(`${apiUrl}/api/dashboard/plans`);
+      const response = await fetch(`${apiUrl}/api/dashboard/plans?status=proposed`);
       if (!response.ok) throw new Error('Failed to fetch plans');
       const data = await response.json();
       setPlans(data.open_plans || []);
