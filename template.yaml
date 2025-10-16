@@ -78,8 +78,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub 'patchpilot-webhook-${Environment}'
-      CodeUri: backend
-      Handler: src.lambda_handler.webhook_handler
+      CodeUri: backend/src
+      Handler: lambda_handler.webhook_handler
       Role: !GetAtt LambdaExecutionRole.Arn
       Events:
         ApiEvent:
@@ -93,8 +93,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub 'patchpilot-plan-approval-${Environment}'
-      CodeUri: backend
-      Handler: src.lambda_handler.plan_approval_handler
+      CodeUri: backend/src
+      Handler: lambda_handler.plan_approval_handler
       Role: !GetAtt LambdaExecutionRole.Arn
       Events:
         ApiEvent:
@@ -108,8 +108,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub 'patchpilot-health-check-${Environment}'
-      CodeUri: backend
-      Handler: src.lambda_handler.health_check_handler
+      CodeUri: backend/src
+      Handler: lambda_handler.health_check_handler
       Role: !GetAtt LambdaExecutionRole.Arn
       Events:
         ApiEvent:
@@ -123,8 +123,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub 'patchpilot-dashboard-${Environment}'
-      CodeUri: backend
-      Handler: src.lambda_handler.dashboard_handler
+      CodeUri: backend/src
+      Handler: lambda_handler.dashboard_handler
       Role: !GetAtt LambdaExecutionRole.Arn
       Events:
         GetPlans:
