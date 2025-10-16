@@ -40,7 +40,8 @@ export default function PlansView() {
   const fetchPlans = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5000/api/dashboard/plans');
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/dashboard/plans`);
       if (!response.ok) throw new Error('Failed to fetch plans');
       const data = await response.json();
       setPlans(data.open_plans || []);
@@ -53,7 +54,8 @@ export default function PlansView() {
 
   const handleApprove = async (planId: string) => {
     try {
-      const response = await fetch('http://localhost:5000/api/dashboard/approve-plan', {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/dashboard/approve-plan`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan_id: planId, approved_by: 'user@company.com' }),
@@ -68,7 +70,8 @@ export default function PlansView() {
 
   const handleReject = async (planId: string) => {
     try {
-      const response = await fetch('http://localhost:5000/api/dashboard/reject-plan', {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/dashboard/reject-plan`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan_id: planId, rejected_by: 'user@company.com', reason: 'Needs review' }),
@@ -84,7 +87,8 @@ export default function PlansView() {
   const generateNewPlan = async () => {
     setGenerating(true);
     try {
-      const response = await fetch('http://localhost:5000/api/dashboard/plans/generate', {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/dashboard/plans/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -108,7 +112,8 @@ export default function PlansView() {
 
   const fetchHistory = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/dashboard/plans/history');
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/dashboard/plans/history`);
       if (!response.ok) throw new Error('Failed to fetch history');
       const data = await response.json();
       setHistory(data.all_plans || []);
@@ -129,7 +134,8 @@ export default function PlansView() {
     if (!editedPlan) return;
     try {
       // Update the plan in the backend
-      const response = await fetch('http://localhost:5000/api/dashboard/plans/update', {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/dashboard/plans/update`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editedPlan),
@@ -160,7 +166,8 @@ export default function PlansView() {
     if (!selectedPlan) return;
     setGenerating(true);
     try {
-      const response = await fetch('http://localhost:5000/api/dashboard/plans/generate', {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/dashboard/plans/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

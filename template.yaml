@@ -151,6 +151,36 @@ Resources:
             RestApiId: !Ref PatchPilotApi
             Path: /api/dashboard/plans/{plan_id}
             Method: PUT
+        GetPlansHistory:
+          Type: Api
+          Properties:
+            RestApiId: !Ref PatchPilotApi
+            Path: /api/dashboard/plans/history
+            Method: GET
+        GeneratePlan:
+          Type: Api
+          Properties:
+            RestApiId: !Ref PatchPilotApi
+            Path: /api/dashboard/plans/generate
+            Method: POST
+        UpdatePlanPost:
+          Type: Api
+          Properties:
+            RestApiId: !Ref PatchPilotApi
+            Path: /api/dashboard/plans/update
+            Method: POST
+        ApprovePlan:
+          Type: Api
+          Properties:
+            RestApiId: !Ref PatchPilotApi
+            Path: /api/dashboard/approve-plan
+            Method: POST
+        RejectPlan:
+          Type: Api
+          Properties:
+            RestApiId: !Ref PatchPilotApi
+            Path: /api/dashboard/reject-plan
+            Method: POST
 
   # API Gateway
   PatchPilotApi:

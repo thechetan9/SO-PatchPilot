@@ -248,10 +248,89 @@ def dashboard_handler(event, context):
                 }
             }
 
+        elif path == '/api/dashboard/plans/history' and http_method == 'GET':
+            result = get_plans_history()
+
+            return {
+                "statusCode": 200,
+                "body": json.dumps(result),
+                "headers": {
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*"
+                }
+            }
+
+        elif path == '/api/dashboard/plans/generate' and http_method == 'POST':
+            body = json.loads(event['body']) if isinstance(event.get('body'), str) else event.get('body', {})
+            # For now, return a mock response - you can implement actual plan generation
+            result = {
+                "success": True,
+                "message": "Plan generation endpoint - implement with your logic"
+            }
+
+            return {
+                "statusCode": 200,
+                "body": json.dumps(result),
+                "headers": {
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*"
+                }
+            }
+
+        elif path == '/api/dashboard/plans/update' and http_method == 'POST':
+            body = json.loads(event['body']) if isinstance(event.get('body'), str) else event.get('body', {})
+            plan_id = body.get('plan_id')
+            result = update_plan(plan_id, body)
+
+            return {
+                "statusCode": 200,
+                "body": json.dumps(result),
+                "headers": {
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*"
+                }
+            }
+
+        elif path == '/api/dashboard/approve-plan' and http_method == 'POST':
+            body = json.loads(event['body']) if isinstance(event.get('body'), str) else event.get('body', {})
+            plan_id = body.get('plan_id')
+            # For now, return a mock response - implement actual approval logic
+            result = {
+                "success": True,
+                "message": f"Plan {plan_id} approved"
+            }
+
+            return {
+                "statusCode": 200,
+                "body": json.dumps(result),
+                "headers": {
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*"
+                }
+            }
+
+        elif path == '/api/dashboard/reject-plan' and http_method == 'POST':
+            body = json.loads(event['body']) if isinstance(event.get('body'), str) else event.get('body', {})
+            plan_id = body.get('plan_id')
+            # For now, return a mock response - implement actual rejection logic
+            result = {
+                "success": True,
+                "message": f"Plan {plan_id} rejected"
+            }
+
+            return {
+                "statusCode": 200,
+                "body": json.dumps(result),
+                "headers": {
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*"
+                }
+            }
+
         else:
             return {
                 "statusCode": 404,
-                "body": json.dumps({"error": "Not found"}),
+                "body": json.dumps({"error": "Not found", "path": path, "method": http_method}),
                 "headers": {
                     "Content-Type": "application/json",
                     "Access-Control-Allow-Origin": "*"
