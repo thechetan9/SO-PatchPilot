@@ -6,6 +6,7 @@ import json
 from agent import PatchPilotAgent
 from orchestrator import PatchOrchestrator
 from logger import log_event, logger
+from dashboard_api import get_open_plans, get_plans_history, get_patch_runs, get_kpis, update_plan
 
 agent = PatchPilotAgent()
 orchestrator = PatchOrchestrator()
@@ -173,4 +174,98 @@ def rollback_handler(event, context):
     except Exception as e:
         logger.error(f"Error rolling back batch: {str(e)}")
         raise
+
+
+def dashboard_handler(event, context):
+    """
+    Lambda handler for dashboard API
+    Handles all dashboard-related requests
+    """
+    try:
+        logger.info(f"Dashboard request: {json.dumps(event)}")
+
+        # Get HTTP method and path
+        http_method = event.get('httpMethod', 'GET')
+        path = event.get('path', '')
+
+        # Route to appropriate handler
+        if path == '/api/dashboard/plans' and http_method == 'GET':
+            # Get query parameters
+            params = event.get('queryStringParameters') or {}
+            status = params.get('status')
+
+            if status == 'proposed':
+                result = get_open_plans()
+            else:
+                result = get_plans_history()
+
+            return {
+                "statusCode": 200,
+                "body": json.dumps(result),
+                "headers": {
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*"
+                }
+            }
+
+        elif path.startswith('/api/dashboard/plans/') and http_method == 'PUT':
+            # Update plan
+            plan_id = event.get('pathParameters', {}).get('plan_id')
+            body = json.loads(event['body']) if isinstance(event.get('body'), str) else event.get('body', {})
+
+            result = update_plan(plan_id, body)
+
+            return {
+                "statusCode": 200,
+                "body": json.dumps(result),
+                "headers": {
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*"
+                }
+            }
+
+        elif path == '/api/dashboard/runs' and http_method == 'GET':
+            result = get_patch_runs()
+
+            return {
+                "statusCode": 200,
+                "body": json.dumps(result),
+                "headers": {
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*"
+                }
+            }
+
+        elif path == '/api/dashboard/kpis' and http_method == 'GET':
+            result = get_kpis()
+
+            return {
+                "statusCode": 200,
+                "body": json.dumps(result),
+                "headers": {
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*"
+                }
+            }
+
+        else:
+            return {
+                "statusCode": 404,
+                "body": json.dumps({"error": "Not found"}),
+                "headers": {
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*"
+                }
+            }
+
+    except Exception as e:
+        logger.error(f"Error in dashboard handler: {str(e)}")
+        return {
+            "statusCode": 500,
+            "body": json.dumps({"error": str(e)}),
+            "headers": {
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*"
+            }
+        }
 

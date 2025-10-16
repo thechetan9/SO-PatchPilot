@@ -116,7 +116,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub 'patchpilot-webhook-${Environment}'
-      CodeUri: .
+      CodeUri: backend
       Handler: src.lambda_handler.webhook_handler
       Role: !GetAtt LambdaExecutionRole.Arn
       Events:
@@ -131,7 +131,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub 'patchpilot-plan-approval-${Environment}'
-      CodeUri: .
+      CodeUri: backend
       Handler: src.lambda_handler.plan_approval_handler
       Role: !GetAtt LambdaExecutionRole.Arn
       Events:
@@ -146,7 +146,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub 'patchpilot-health-check-${Environment}'
-      CodeUri: .
+      CodeUri: backend
       Handler: src.lambda_handler.health_check_handler
       Role: !GetAtt LambdaExecutionRole.Arn
       Events:
@@ -156,6 +156,39 @@ Resources:
             RestApiId: !Ref PatchPilotApi
             Path: /health-check
             Method: POST
+
+  DashboardApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub 'patchpilot-dashboard-${Environment}'
+      CodeUri: backend
+      Handler: src.lambda_handler.dashboard_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        GetPlans:
+          Type: Api
+          Properties:
+            RestApiId: !Ref PatchPilotApi
+            Path: /api/dashboard/plans
+            Method: GET
+        GetRuns:
+          Type: Api
+          Properties:
+            RestApiId: !Ref PatchPilotApi
+            Path: /api/dashboard/runs
+            Method: GET
+        GetKPIs:
+          Type: Api
+          Properties:
+            RestApiId: !Ref PatchPilotApi
+            Path: /api/dashboard/kpis
+            Method: GET
+        UpdatePlan:
+          Type: Api
+          Properties:
+            RestApiId: !Ref PatchPilotApi
+            Path: /api/dashboard/plans/{plan_id}
+            Method: PUT
 
   # API Gateway
   PatchPilotApi:
