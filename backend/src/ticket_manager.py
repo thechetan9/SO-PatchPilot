@@ -5,10 +5,10 @@ Handles SuperOps ticket lifecycle and reporting
 import json
 from typing import Dict, List, Optional
 from datetime import datetime, timedelta
-from .superops_client import get_superops_client
-from .aws_clients import get_dynamodb_client
-from .logger import log_event, logger
-from .config import DYNAMODB_TABLE
+from superops_client import get_superops_client
+from aws_clients import get_dynamodb_client
+from logger import log_event, logger
+from config import DYNAMODB_TABLE
 
 
 class TicketManager:

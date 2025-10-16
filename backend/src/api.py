@@ -4,9 +4,9 @@ Local testing and development
 """
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from .agent import PatchPilotAgent
-from .dashboard_api import dashboard_bp
-from .logger import log_event, logger
+from agent import PatchPilotAgent
+from dashboard_api import dashboard_bp
+from logger import log_event, logger
 import json
 
 app = Flask(__name__)

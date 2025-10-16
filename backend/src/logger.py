@@ -1,7 +1,7 @@
 import logging
 import json
 from datetime import datetime
-from src.config import LOG_LEVEL
+from config import LOG_LEVEL
 
 # Configure logging
 logging.basicConfig(

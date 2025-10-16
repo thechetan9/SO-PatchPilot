@@ -3,9 +3,9 @@ Lambda Handler for PatchPilot
 Entry point for AWS Lambda functions
 """
 import json
-from .agent import PatchPilotAgent
-from .orchestrator import PatchOrchestrator
-from .logger import log_event, logger
+from agent import PatchPilotAgent
+from orchestrator import PatchOrchestrator
+from logger import log_event, logger
 
 agent = PatchPilotAgent()
 orchestrator = PatchOrchestrator()

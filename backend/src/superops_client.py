@@ -4,7 +4,7 @@ For hackathon demo - replace with real API calls later
 """
 from typing import Dict, List, Optional
 from datetime import datetime, timedelta
-from src.logger import log_event
+from logger import log_event
 
 class MockSuperOpsClient:
     """Mock SuperOps client for demo purposes"""

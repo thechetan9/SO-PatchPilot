@@ -3,11 +3,11 @@ AWS Service Clients
 Handles connections to Lambda, Step Functions, DynamoDB, Bedrock, etc.
 """
 import boto3
-from src.config import (
-    AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, 
+from config import (
+    AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY,
     AWS_SESSION_TOKEN, DYNAMODB_TABLE_PATCH_RUNS, DYNAMODB_TABLE_PLANS
 )
-from src.logger import logger
+from logger import logger
 
 # Initialize AWS clients
 def get_bedrock_client():

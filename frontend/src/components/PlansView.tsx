@@ -5,17 +5,19 @@ import { useState, useEffect } from 'react';
 interface Plan {
   plan_id: string;
   client_id: string;
+  ticket_id?: string;
   status: string;
   created_at: string;
-  devices_affected: string[];
-  patches: number;
-  strategy: string;
+  devices_affected?: string[];
+  patches?: number;
+  strategy?: string;
   canary_size: number;
   batches: number[];
   estimated_duration_hours: number;
-  device_count: number;
+  device_count?: number;
   health_check_interval_minutes?: number;
   rollback_threshold_percent?: number;
+  notes?: string;
   approved_at?: string;
   rejected_at?: string;
 }
@@ -234,12 +236,12 @@ export default function PlansView() {
               {editMode && editedPlan ? (
                 <input
                   type="text"
-                  value={editedPlan.strategy}
+                  value={editedPlan.strategy || 'canary_then_batch'}
                   onChange={(e) => setEditedPlan({ ...editedPlan, strategy: e.target.value })}
                   className="w-full bg-slate-600 text-white rounded px-2 py-1 mt-1"
                 />
               ) : (
-                <p className="text-white font-semibold">{displayPlan.strategy}</p>
+                <p className="text-white font-semibold">{displayPlan.strategy || 'canary_then_batch'}</p>
               )}
             </div>
             <div className="bg-slate-700 p-4 rounded">
@@ -260,12 +262,12 @@ export default function PlansView() {
               {editMode && editedPlan ? (
                 <input
                   type="number"
-                  value={editedPlan.device_count}
+                  value={editedPlan.device_count || 0}
                   onChange={(e) => setEditedPlan({ ...editedPlan, device_count: parseInt(e.target.value) })}
                   className="w-full bg-slate-600 text-white rounded px-2 py-1 mt-1"
                 />
               ) : (
-                <p className="text-white font-semibold">{displayPlan.device_count}</p>
+                <p className="text-white font-semibold">{displayPlan.device_count || 'N/A'}</p>
               )}
             </div>
             <div className="bg-slate-700 p-4 rounded">
@@ -273,12 +275,12 @@ export default function PlansView() {
               {editMode && editedPlan ? (
                 <input
                   type="number"
-                  value={editedPlan.patches}
+                  value={editedPlan.patches || 0}
                   onChange={(e) => setEditedPlan({ ...editedPlan, patches: parseInt(e.target.value) })}
                   className="w-full bg-slate-600 text-white rounded px-2 py-1 mt-1"
                 />
               ) : (
-                <p className="text-white font-semibold">{displayPlan.patches}</p>
+                <p className="text-white font-semibold">{displayPlan.patches || 'N/A'}</p>
               )}
             </div>
           </div>
@@ -323,18 +325,42 @@ export default function PlansView() {
             </div>
           </div>
 
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold text-white mb-4">Affected Devices</h3>
-            <div className="bg-slate-700 p-4 rounded max-h-48 overflow-y-auto">
-              <div className="space-y-2">
-                {selectedPlan.devices_affected.map((device, idx) => (
-                  <div key={idx} className="text-gray-300 text-sm">
-                    • {device}
-                  </div>
-                ))}
+          {selectedPlan.devices_affected && selectedPlan.devices_affected.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-white mb-4">Affected Devices</h3>
+              <div className="bg-slate-700 p-4 rounded max-h-48 overflow-y-auto">
+                <div className="space-y-2">
+                  {selectedPlan.devices_affected.map((device, idx) => (
+                    <div key={idx} className="text-gray-300 text-sm">
+                      • {device}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
+          )}
+
+          {selectedPlan.notes && (
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-white mb-4">AI Strategy Notes</h3>
+              <div className="bg-slate-700 p-4 rounded">
+                <p className="text-gray-300 text-sm leading-relaxed">
+                  {selectedPlan.notes}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {selectedPlan.ticket_id && (
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-white mb-4">Ticket Information</h3>
+              <div className="bg-slate-700 p-4 rounded">
+                <p className="text-gray-300 text-sm">
+                  <span className="font-semibold">Ticket ID:</span> {selectedPlan.ticket_id}
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-3">
             {editMode ? (
@@ -481,17 +507,17 @@ export default function PlansView() {
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
                 <p className="text-sm text-slate-400">Devices Affected</p>
-                <p className="text-2xl font-bold text-blue-400">{plan.device_count}</p>
+                <p className="text-2xl font-bold text-blue-400">{plan.device_count || 'N/A'}</p>
               </div>
               <div>
                 <p className="text-sm text-slate-400">Patches</p>
-                <p className="text-lg font-semibold text-slate-200">{plan.patches}</p>
+                <p className="text-lg font-semibold text-slate-200">{plan.patches || 'N/A'}</p>
               </div>
             </div>
 
             <div className="mb-4">
               <p className="text-sm text-slate-400 mb-2">Strategy</p>
-              <p className="text-slate-200 bg-slate-900 rounded p-2">{plan.strategy}</p>
+              <p className="text-slate-200 bg-slate-900 rounded p-2">{plan.strategy || 'canary_then_batch'}</p>
             </div>
 
             <div className="flex gap-3">

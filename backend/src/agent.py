@@ -5,10 +5,11 @@ Handles plan generation, prioritization, and orchestration
 import json
 from typing import Dict, List, Optional
 from datetime import datetime
-from .aws_clients import get_bedrock_client
-from .superops_client import get_superops_client
-from .logger import log_event, logger
-from .config import BEDROCK_MODEL_ID
+from decimal import Decimal
+from aws_clients import get_bedrock_client
+from superops_client import get_superops_client
+from logger import log_event, logger
+from config import BEDROCK_MODEL_ID
 
 class PatchPilotAgent:
     """Main agent for patch orchestration"""
@@ -83,26 +84,43 @@ class PatchPilotAgent:
         prompt = self._build_planning_prompt(context)
         
         try:
-            # Call Bedrock Claude model
-            response = self.bedrock.invoke_model(
-                modelId=self.model_id,
-                contentType="application/json",
-                accept="application/json",
-                body=json.dumps({
-                    "anthropic_version": "bedrock-2023-06-01",
-                    "max_tokens": 2048,
-                    "messages": [
-                        {
-                            "role": "user",
-                            "content": prompt
+            # Call Bedrock model (supports both Claude and Titan)
+            if "claude" in self.model_id.lower():
+                # Claude API format
+                response = self.bedrock.invoke_model(
+                    modelId=self.model_id,
+                    contentType="application/json",
+                    accept="application/json",
+                    body=json.dumps({
+                        "anthropic_version": "bedrock-2023-05-31",
+                        "max_tokens": 2048,
+                        "messages": [
+                            {
+                                "role": "user",
+                                "content": prompt
+                            }
+                        ]
+                    })
+                )
+                response_body = json.loads(response['body'].read())
+                plan_text = response_body['content'][0]['text']
+            else:
+                # Titan API format
+                response = self.bedrock.invoke_model(
+                    modelId=self.model_id,
+                    contentType="application/json",
+                    accept="application/json",
+                    body=json.dumps({
+                        "inputText": prompt,
+                        "textGenerationConfig": {
+                            "maxTokenCount": 2048,
+                            "temperature": 0.7,
+                            "topP": 0.9
                         }
-                    ]
-                })
-            )
-            
-            # Parse response
-            response_body = json.loads(response['body'].read())
-            plan_text = response_body['content'][0]['text']
+                    })
+                )
+                response_body = json.loads(response['body'].read())
+                plan_text = response_body['results'][0]['outputText']
             
             # Parse plan from Claude's response
             plan = self._parse_plan_response(plan_text, context)
@@ -201,12 +219,47 @@ Respond with a JSON object containing:
     
     def _store_plan(self, plan: Dict, ticket_id: str, client_id: str) -> str:
         """Store plan in DynamoDB"""
-        # TODO: Implement DynamoDB storage
-        log_event("plan_stored", {
-            "plan_id": plan["plan_id"],
-            "ticket_id": ticket_id,
-            "client_id": client_id
-        })
+        try:
+            from aws_clients import get_dynamodb_resource
+            from config import DYNAMODB_TABLE_PLANS
+
+            dynamodb = get_dynamodb_resource()
+            table = dynamodb.Table(DYNAMODB_TABLE_PLANS)
+
+            # Prepare item for DynamoDB (convert floats to Decimal)
+            item = {
+                'plan_id': plan['plan_id'],
+                'ticket_id': ticket_id,
+                'client_id': client_id,
+                'created_at': plan['created_at'],
+                'canary_size': plan['canary_size'],
+                'batches': plan['batches'],
+                'health_check_interval_minutes': plan['health_check_interval_minutes'],
+                'rollback_threshold_percent': Decimal(str(plan['rollback_threshold_percent'])),
+                'estimated_duration_hours': Decimal(str(plan['estimated_duration_hours'])),
+                'notes': plan['notes'],
+                'status': plan['status']
+            }
+
+            # Store in DynamoDB
+            table.put_item(Item=item)
+
+            log_event("plan_stored", {
+                "plan_id": plan["plan_id"],
+                "ticket_id": ticket_id,
+                "client_id": client_id,
+                "storage": "dynamodb"
+            })
+
+            logger.info(f"✅ Plan {plan['plan_id']} stored in DynamoDB")
+
+        except Exception as e:
+            logger.error(f"❌ Error storing plan in DynamoDB: {e}")
+            log_event("plan_storage_failed", {
+                "plan_id": plan["plan_id"],
+                "error": str(e)
+            })
+
         return plan["plan_id"]
     
     def _post_plan_to_ticket(self, ticket_id: str, plan: Dict):

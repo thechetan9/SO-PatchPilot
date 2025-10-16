@@ -1,5 +1,11 @@
 # PatchPilot - Agentic Patch & Vulnerability Orchestrator
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![Next.js 15](https://img.shields.io/badge/Next.js-15-black)](https://nextjs.org/)
+[![AWS Bedrock](https://img.shields.io/badge/AWS-Bedrock-orange)](https://aws.amazon.com/bedrock/)
+[![Tests](https://img.shields.io/badge/tests-18%20passing-brightgreen)](./backend/tests/)
+
 An AI-powered patch management system that uses AWS Bedrock (Claude) to intelligently orchestrate patch deployments across your infrastructure.
 
 ## Features
@@ -37,7 +43,7 @@ Step Functions Execution
 ## Project Structure
 
 ```text
-patchpilot/
+SO-PatchPilot/
 ├── backend/                    # Python API & Core Logic
 │   ├── src/                    # Source code
 │   │   ├── agent.py           # AI-powered plan generation
@@ -45,22 +51,34 @@ patchpilot/
 │   │   ├── dashboard_api.py   # Flask API endpoints
 │   │   ├── ticket_manager.py  # SuperOps integration
 │   │   ├── lambda_handler.py  # AWS Lambda entry point
+│   │   ├── api.py             # Flask API server
 │   │   ├── config.py          # Configuration
 │   │   ├── aws_clients.py     # AWS service clients
-│   │   ├── superops_client.py # SuperOps client
+│   │   ├── superops_client.py # SuperOps client (Mock)
 │   │   └── logger.py          # Logging utilities
-│   ├── tests/                 # Test suite
+│   ├── tests/                 # Test suite (18 tests)
 │   │   ├── test_agent.py
 │   │   ├── test_orchestrator.py
 │   │   └── test_ticket_manager.py
+│   ├── venv/                  # Virtual environment (not in git)
 │   └── requirements.txt       # Python dependencies
-├── frontend/                   # React/TypeScript UI
+├── frontend/                   # Next.js 15 + React 19 + TypeScript
 │   ├── src/
+│   │   ├── app/               # Next.js app directory
+│   │   └── components/        # React components
+│   ├── public/                # Static assets
 │   ├── package.json
 │   └── ...
 ├── .github/workflows/         # CI/CD pipelines
-├── README.md
-└── LICENSE
+│   ├── ci.yml                 # Continuous Integration
+│   └── deploy.yml             # Deployment workflow
+├── .gitignore                 # Git ignore rules
+├── .env.example               # Environment variables template
+├── README.md                  # This file
+├── LICENSE                    # MIT License
+├── template.yaml              # AWS SAM template
+├── run-backend.ps1            # PowerShell script to run backend
+└── run-frontend.ps1           # PowerShell script to run frontend
 ```
 
 ## Setup
@@ -72,43 +90,53 @@ patchpilot/
 - AWS Account with Bedrock access
 - Windows 11 (or any OS)
 
-### Installation
+### Quick Start (Windows)
 
-1. **Clone the repository**
+**Option 1: Using PowerShell Scripts (Recommended)**
 
-```bash
-git clone <repo-url>
-cd patchpilot
+```powershell
+# Run backend (Terminal 1)
+.\run-backend.ps1
+
+# Run frontend (Terminal 2)
+.\run-frontend.ps1
 ```
 
-1. **Backend Setup**
+**Option 2: Manual Setup**
+
+#### 1. Clone the repository
+
+```bash
+git clone https://github.com/YOUR_USERNAME/PatchPilot.git
+cd SO-PatchPilot
+```
+
+#### 2. Backend Setup
 
 ```bash
 cd backend
 python -m venv venv
-venv\Scripts\activate  # On Windows
+venv\Scripts\activate  # Windows CMD
+# or
+.\venv\Scripts\Activate.ps1  # PowerShell
+# or
+source venv/Scripts/activate  # Git Bash
+
 pip install -r requirements.txt
 ```
 
-1. **Frontend Setup**
+#### 3. Frontend Setup
 
-```bash
-cd ../frontend
+**Note**: Use PowerShell or CMD (npm doesn't work in Git Bash)
+
+```powershell
+cd frontend
 npm install
 ```
 
-1. **Configure AWS credentials** (in `backend/` directory)
+#### 4. Configure AWS credentials (Optional for local testing)
 
-On Windows PowerShell:
-
-```powershell
-$env:AWS_ACCESS_KEY_ID = "your_access_key"
-$env:AWS_SECRET_ACCESS_KEY = "your_secret_key"
-$env:AWS_SESSION_TOKEN = "your_session_token"
-$env:AWS_REGION = "us-east-2"
-```
-
-Or create `backend/.env` file:
+Create `backend/.env` file (copy from `.env.example`):
 
 ```bash
 AWS_ACCESS_KEY_ID=your_access_key
@@ -118,27 +146,59 @@ AWS_REGION=us-east-2
 BEDROCK_MODEL_ID=anthropic.claude-3-5-haiku-20241022-v1:0
 ```
 
-1. **Run tests** (from `backend/` directory)
+**Note**: The app works with mock data even without AWS credentials!
+
+#### 5. Run tests
 
 ```bash
+cd backend
 pytest tests/ -v
+# Expected: 18 tests should pass
 ```
 
-1. **Start local API** (from `backend/` directory)
+#### 6. Start the application
+
+**Backend** (Terminal 1):
 
 ```bash
+cd backend
 python -m src.api
+# Runs on http://localhost:5000
+```
+
+**Frontend** (Terminal 2 - use PowerShell/CMD):
+
+```powershell
+cd frontend
+npm run dev
+# Runs on http://localhost:3000
 ```
 
 ## Usage
 
 ### Local Testing
 
-```bash
-# Start the Flask API
-python -m src.api
+#### Test Backend API
 
-# In another terminal, test the webhook
+```bash
+# Start the Flask API (if not already running)
+cd backend
+python -m src.api
+```
+
+Visit <http://localhost:5000/health> to verify it's running.
+
+#### Test with Sample Webhook
+
+```bash
+# Use the test script
+cd backend
+python ../test_backend.py
+```
+
+Or manually with curl:
+
+```bash
 curl -X POST http://localhost:5000/webhook/superops \
   -H "Content-Type: application/json" \
   -d '{
@@ -149,6 +209,10 @@ curl -X POST http://localhost:5000/webhook/superops \
   }'
 ```
 
+#### Test Frontend
+
+Open <http://localhost:3000> in your browser to see the dashboard.
+
 ### Deploy to AWS
 
 ```bash
@@ -158,6 +222,8 @@ sam build
 # Deploy
 sam deploy --guided
 ```
+
+After deployment, update your SuperOps webhook URL to point to the API Gateway endpoint.
 
 ## Key Components
 
@@ -190,14 +256,90 @@ Simulates SuperOps API for demo:
 - **Systems Manager**: Execute patch commands
 - **Security Hub**: CVE findings
 
-## Next Steps
+## AWS Setup
 
-1. **Real SuperOps Integration**: Replace mock client with actual API calls
-2. **Step Functions Workflow**: Implement patch execution orchestration
-3. **Health Checks**: Add device health monitoring during patches
-4. **Rollback Logic**: Implement automatic rollback on failures
-5. **Notifications**: Add email/Slack notifications
-6. **Dashboard**: Build web UI for plan review and approval
+### Prerequisites
+
+- AWS Account with Administrator access
+- AWS Bedrock access enabled (see [ENABLE_BEDROCK.md](ENABLE_BEDROCK.md))
+
+### Quick AWS Setup
+
+1. **Set up credentials** (from AWS Academy or AWS Console):
+
+   ```powershell
+   .\setup-aws-credentials.ps1
+   ```
+
+2. **Create DynamoDB tables**:
+
+   ```bash
+   python create_dynamodb_tables.py
+   ```
+
+3. **Enable Bedrock access**:
+   - Follow instructions in [ENABLE_BEDROCK.md](ENABLE_BEDROCK.md)
+   - Request access to Claude 3.5 Sonnet in AWS Console
+
+4. **Test AWS connection**:
+
+   ```bash
+   python test_aws_connection.py
+   ```
+
+### AWS Services Used
+
+- **AWS Bedrock** - Claude 3.5 Sonnet for AI-powered plan generation
+- **DynamoDB** - Storage for patch plans and execution history
+- **Lambda** - Serverless function execution (for production deployment)
+- **Step Functions** - Workflow orchestration (for production deployment)
+- **Systems Manager** - Patch execution on EC2 instances
+
+## API Endpoints
+
+### Backend API (Port 5000)
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/health` | GET | Health check |
+| `/devices?client_id=<id>` | GET | Get devices for a client |
+| `/webhook/superops` | POST | Receive SuperOps webhook |
+| `/plan/approve` | POST | Approve a patch plan |
+| `/health-check` | POST | Perform health check |
+| `/api/dashboard/plans` | GET | Get all patch plans |
+| `/api/dashboard/runs` | GET | Get all patch runs |
+| `/api/dashboard/kpis` | GET | Get KPI summary |
+
+## Testing
+
+### Run All Tests
+
+```bash
+cd backend
+pytest tests/ -v
+```
+
+**Expected Output**: 18 tests should pass
+
+### Test Coverage
+
+- `test_agent.py` - 6 tests for AI agent functionality
+- `test_orchestrator.py` - 6 tests for patch orchestration
+- `test_ticket_manager.py` - 6 tests for ticket management
+
+## Roadmap
+
+- [x] AI-powered patch plan generation
+- [x] Mock SuperOps client for testing
+- [x] Flask API with dashboard endpoints
+- [x] Unit tests (18 tests)
+- [x] Next.js dashboard UI
+- [ ] Real SuperOps API integration
+- [ ] Step Functions workflow implementation
+- [ ] Device health monitoring
+- [ ] Automatic rollback on failures
+- [ ] Email/Slack notifications
+- [ ] AWS deployment automation
 
 ## Security Notes
 
@@ -206,7 +348,31 @@ Simulates SuperOps API for demo:
 - ✅ AWS IAM roles for Lambda execution
 - ✅ DynamoDB encryption at rest
 - ✅ All API calls logged for audit trail
+- ✅ Mock data used for local testing (no real credentials needed)
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## Documentation
+
+- **Quick Start**: See [QUICKSTART.md](QUICKSTART.md)
+- **Deployment**: See [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md)
+- **Frontend Testing**: See [FRONTEND_TESTING.md](FRONTEND_TESTING.md)
+- **AWS SAM Template**: See [template.yaml](template.yaml)
+
+## Support
+
+For issues, questions, or contributions, please open an issue on GitHub.
 
 ## License
 
-MIT
+MIT License - see [LICENSE](LICENSE) file for details.
+
+---
+
+**Built with ❤️ using AWS Bedrock, Claude 3.5 Haiku, Next.js, and Python**

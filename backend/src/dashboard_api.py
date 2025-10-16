@@ -4,34 +4,46 @@ Provides endpoints for dashboard UI to display plans, runs, and KPIs
 """
 from flask import Blueprint, jsonify, request
 from datetime import datetime, timedelta
-from .aws_clients import get_dynamodb_resource
-from .logger import log_event, logger
-from .config import DYNAMODB_TABLE
+from decimal import Decimal
+from aws_clients import get_dynamodb_resource
+from logger import log_event, logger
+from config import DYNAMODB_TABLE, DYNAMODB_TABLE_PLANS
 
 dashboard_bp = Blueprint('dashboard', __name__, url_prefix='/api/dashboard')
 
 dynamodb = get_dynamodb_resource()
 table = dynamodb.Table(DYNAMODB_TABLE)
+plans_table = dynamodb.Table(DYNAMODB_TABLE_PLANS)
 
 
-# Store plan statuses in memory (in production, use DynamoDB)
-_plan_statuses = {}
-_all_plans = {}  # Store all plans (pending, approved, rejected)
-_plan_counter = 0
+# Helper function to convert Decimal to float for JSON serialization
+def decimal_to_float(obj):
+    """Convert Decimal objects to float for JSON serialization"""
+    if isinstance(obj, Decimal):
+        return float(obj)
+    elif isinstance(obj, dict):
+        return {k: decimal_to_float(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [decimal_to_float(item) for item in obj]
+    return obj
 
 @dashboard_bp.route('/plans', methods=['GET'])
 def get_open_plans():
     """
-    Get all open patch plans
+    Get all open patch plans from DynamoDB
     Returns: List of plans awaiting approval
     """
     try:
         client_id = request.args.get('client_id')
 
-        # Return only pending approval plans
+        # Scan DynamoDB for all plans
+        response = plans_table.scan()
+        all_plans = response.get('Items', [])
+
+        # Filter for pending approval plans
         open_plans = [
-            plan for plan in _all_plans.values()
-            if plan.get("status") == "pending_approval"
+            decimal_to_float(plan) for plan in all_plans
+            if plan.get("status") == "proposed"
         ]
 
         plans = {
@@ -54,19 +66,20 @@ def get_open_plans():
 @dashboard_bp.route('/plans/history', methods=['GET'])
 def get_plans_history():
     """
-    Get all plans (pending, approved, rejected)
+    Get all plans from DynamoDB (proposed, approved, rejected)
     Returns: Complete plan history
     """
     try:
         client_id = request.args.get('client_id')
 
-        # Return all plans
-        all_plans = list(_all_plans.values())
+        # Scan DynamoDB for all plans
+        response = plans_table.scan()
+        all_plans = [decimal_to_float(plan) for plan in response.get('Items', [])]
 
         history = {
             "all_plans": all_plans,
             "total": len(all_plans),
-            "pending": len([p for p in all_plans if p.get("status") == "pending_approval"]),
+            "pending": len([p for p in all_plans if p.get("status") == "proposed"]),
             "approved": len([p for p in all_plans if p.get("status") == "approved"]),
             "rejected": len([p for p in all_plans if p.get("status") == "rejected"])
         }
@@ -132,34 +145,60 @@ def generate_new_plan():
 @dashboard_bp.route('/plans/update', methods=['POST'])
 def update_plan():
     """
-    Update an existing patch plan
+    Update an existing patch plan in DynamoDB
     """
     try:
         data = request.get_json()
         plan_id = data.get('plan_id')
 
-        if plan_id not in _all_plans:
+        # Get existing plan from DynamoDB
+        response = plans_table.get_item(Key={'plan_id': plan_id})
+
+        if 'Item' not in response:
             return jsonify({"error": "Plan not found"}), 404
 
+        existing_plan = response['Item']
+
         # Update plan fields
-        _all_plans[plan_id].update({
-            "canary_size": data.get("canary_size", _all_plans[plan_id]["canary_size"]),
-            "batches": data.get("batches", _all_plans[plan_id]["batches"]),
-            "estimated_duration_hours": data.get("estimated_duration_hours", _all_plans[plan_id]["estimated_duration_hours"]),
-            "device_count": data.get("device_count", _all_plans[plan_id]["device_count"]),
-            "strategy": data.get("strategy", _all_plans[plan_id]["strategy"]),
-            "patches": data.get("patches", _all_plans[plan_id]["patches"]),
-            "health_check_interval_minutes": data.get("health_check_interval_minutes", _all_plans[plan_id].get("health_check_interval_minutes", 10)),
-            "rollback_threshold_percent": data.get("rollback_threshold_percent", _all_plans[plan_id].get("rollback_threshold_percent", 5))
-        })
+        update_expression = "SET "
+        expression_values = {}
+        expression_names = {}
+
+        if 'status' in data:
+            update_expression += "#status = :status, "
+            expression_values[':status'] = data['status']
+            expression_names['#status'] = 'status'
+
+        if 'canary_size' in data:
+            update_expression += "canary_size = :canary_size, "
+            expression_values[':canary_size'] = data['canary_size']
+
+        if 'batches' in data:
+            update_expression += "batches = :batches, "
+            expression_values[':batches'] = data['batches']
+
+        # Remove trailing comma and space
+        update_expression = update_expression.rstrip(', ')
+
+        # Update in DynamoDB
+        plans_table.update_item(
+            Key={'plan_id': plan_id},
+            UpdateExpression=update_expression,
+            ExpressionAttributeValues=expression_values,
+            ExpressionAttributeNames=expression_names if expression_names else None
+        )
 
         log_event("plan_updated", {
             "plan_id": plan_id
         })
 
+        # Get updated plan
+        response = plans_table.get_item(Key={'plan_id': plan_id})
+        updated_plan = decimal_to_float(response['Item'])
+
         return jsonify({
             "status": "updated",
-            "plan": _all_plans[plan_id]
+            "plan": updated_plan
         }), 200
 
     except Exception as e:
