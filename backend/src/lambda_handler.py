@@ -525,13 +525,20 @@ def dashboard_handler(event, context):
                 plan_id = body.get('plan_id')
                 approved_by = body.get('approved_by', 'user@company.com')
 
-                # Update plan status in DynamoDB
+                # Get plan details from DynamoDB
                 db = get_dynamodb()
                 if not db:
                     raise Exception("Failed to initialize DynamoDB")
                 plans_table = db.Table(DYNAMODB_TABLE_PLANS)
 
-                # Update the plan
+                # Fetch the plan
+                plan_response = plans_table.get_item(Key={'plan_id': plan_id})
+                if 'Item' not in plan_response:
+                    raise Exception(f"Plan {plan_id} not found")
+
+                plan = plan_response['Item']
+
+                # Update plan status
                 plans_table.update_item(
                     Key={'plan_id': plan_id},
                     UpdateExpression='SET #status = :status, approved_at = :approved_at, approved_by = :approved_by',
@@ -545,11 +552,38 @@ def dashboard_handler(event, context):
 
                 logger.info(f"Plan approved: {plan_id} by {approved_by}")
 
+                # Create patch run record in PatchPilotExecutions table
+                import time
+                execution_id = f"EXEC-{int(time.time() * 1000)}"
+                execution_table = db.Table(DYNAMODB_TABLE)
+
+                # Create execution record (keep Decimal types for DynamoDB)
+                execution_record = {
+                    "execution_id": execution_id,
+                    "plan_id": plan_id,
+                    "ticket_id": plan.get('ticket_id', f'TICKET-{plan_id}'),
+                    "client_id": plan.get('client_id', 'unknown'),
+                    "status": "in_progress",
+                    "started_at": datetime.utcnow().isoformat(),
+                    "approved_by": approved_by,
+                    "canary_size": plan.get('canary_size', Decimal('0')),
+                    "batches": plan.get('batches', []),
+                    "total_devices": plan.get('device_count', Decimal('0')),
+                    "current_batch": Decimal('0'),
+                    "successful_devices": Decimal('0'),
+                    "failed_devices": Decimal('0'),
+                    "rollback_threshold_percent": plan.get('rollback_threshold_percent', Decimal('5.0'))
+                }
+
+                execution_table.put_item(Item=execution_record)
+                logger.info(f"Patch run created: {execution_id} for plan {plan_id}")
+
                 return {
                     "statusCode": 200,
                     "body": json.dumps({
                         "success": True,
-                        "message": f"Plan {plan_id} approved and ready for execution"
+                        "message": f"Plan {plan_id} approved and execution started",
+                        "execution_id": execution_id
                     }),
                     "headers": {
                         "Content-Type": "application/json",
