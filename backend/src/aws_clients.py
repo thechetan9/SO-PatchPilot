@@ -3,92 +3,61 @@ AWS Service Clients
 Handles connections to Lambda, Step Functions, DynamoDB, Bedrock, etc.
 """
 import boto3
-from config import (
-    AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY,
-    AWS_SESSION_TOKEN, DYNAMODB_TABLE_PATCH_RUNS, DYNAMODB_TABLE_PLANS
-)
+import os
+from config import AWS_REGION, DYNAMODB_TABLE_PATCH_RUNS, DYNAMODB_TABLE_PLANS
 from logger import logger
+
+# In Lambda, use IAM role credentials. For local dev, use explicit credentials
+def _get_boto3_kwargs():
+    """Get boto3 client kwargs - use IAM role in Lambda, explicit creds locally"""
+    kwargs = {'region_name': AWS_REGION}
+
+    # Only add explicit credentials if they're available (local dev)
+    access_key = os.getenv("AWS_ACCESS_KEY_ID")
+    secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+    session_token = os.getenv("AWS_SESSION_TOKEN")
+
+    if access_key and secret_key:
+        kwargs['aws_access_key_id'] = access_key
+        kwargs['aws_secret_access_key'] = secret_key
+        if session_token:
+            kwargs['aws_session_token'] = session_token
+
+    return kwargs
 
 # Initialize AWS clients
 def get_bedrock_client():
     """Get Bedrock client for Claude model"""
-    return boto3.client(
-        'bedrock-runtime',
-        region_name=AWS_REGION,
-        aws_access_key_id=AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-        aws_session_token=AWS_SESSION_TOKEN
-    )
+    return boto3.client('bedrock-runtime', **_get_boto3_kwargs())
 
 def get_dynamodb_client():
     """Get DynamoDB client"""
-    return boto3.client(
-        'dynamodb',
-        region_name=AWS_REGION,
-        aws_access_key_id=AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-        aws_session_token=AWS_SESSION_TOKEN
-    )
+    return boto3.client('dynamodb', **_get_boto3_kwargs())
 
 def get_dynamodb_resource():
     """Get DynamoDB resource for table operations"""
-    return boto3.resource(
-        'dynamodb',
-        region_name=AWS_REGION,
-        aws_access_key_id=AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-        aws_session_token=AWS_SESSION_TOKEN
-    )
+    return boto3.resource('dynamodb', **_get_boto3_kwargs())
 
 def get_ssm_client():
     """Get Systems Manager client"""
-    return boto3.client(
-        'ssm',
-        region_name=AWS_REGION,
-        aws_access_key_id=AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-        aws_session_token=AWS_SESSION_TOKEN
+    return boto3.client('ssm', **_get_boto3_kwargs()
     )
 
 def get_stepfunctions_client():
     """Get Step Functions client"""
-    return boto3.client(
-        'stepfunctions',
-        region_name=AWS_REGION,
-        aws_access_key_id=AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-        aws_session_token=AWS_SESSION_TOKEN
-    )
+    return boto3.client('stepfunctions', **_get_boto3_kwargs())
 
 def get_lambda_client():
     """Get Lambda client"""
-    return boto3.client(
-        'lambda',
-        region_name=AWS_REGION,
-        aws_access_key_id=AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-        aws_session_token=AWS_SESSION_TOKEN
-    )
+    return boto3.client('lambda', **_get_boto3_kwargs())
 
 def get_cloudwatch_client():
     """Get CloudWatch client"""
-    return boto3.client(
-        'cloudwatch',
-        region_name=AWS_REGION,
-        aws_access_key_id=AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-        aws_session_token=AWS_SESSION_TOKEN
-    )
+    return boto3.client('cloudwatch', **_get_boto3_kwargs())
 
 def get_securityhub_client():
     """Get Security Hub client"""
-    return boto3.client(
-        'securityhub',
-        region_name=AWS_REGION,
-        aws_access_key_id=AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-        aws_session_token=AWS_SESSION_TOKEN
-    )
+    return boto3.client('securityhub', **_get_boto3_kwargs())
 
 # Initialize DynamoDB resource lazily
 _dynamodb = None
