@@ -90,6 +90,23 @@ def get_securityhub_client():
         aws_session_token=AWS_SESSION_TOKEN
     )
 
+# Initialize DynamoDB resource lazily
+_dynamodb = None
+
+def get_dynamodb():
+    """Get or initialize DynamoDB resource"""
+    global _dynamodb
+    if _dynamodb is None:
+        try:
+            _dynamodb = get_dynamodb_resource()
+        except Exception as e:
+            logger.error(f"Failed to initialize DynamoDB: {str(e)}")
+            _dynamodb = None
+    return _dynamodb
+
+# Alias for backward compatibility
+dynamodb = get_dynamodb
+
 def ensure_dynamodb_tables():
     """Ensure DynamoDB tables exist"""
     dynamodb = get_dynamodb_resource()

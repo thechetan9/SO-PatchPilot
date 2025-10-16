@@ -34,7 +34,8 @@ export default function KPIView() {
   const fetchKPIs = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5000/api/dashboard/kpis');
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/dashboard/kpis`);
       if (!response.ok) throw new Error('Failed to fetch KPIs');
       const data = await response.json();
       setKpis(data);

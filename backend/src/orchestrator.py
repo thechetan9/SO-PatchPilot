@@ -5,9 +5,9 @@ Handles phased patch execution with health checks and rollback
 import json
 from typing import Dict, List, Optional
 from datetime import datetime
-from .aws_clients import get_stepfunctions_client, get_ssm_client, get_dynamodb_client
-from .logger import log_event, logger
-from .config import STEP_FUNCTIONS_ARN, DYNAMODB_TABLE
+from aws_clients import get_stepfunctions_client, get_ssm_client, get_dynamodb_client
+from logger import log_event, logger
+from config import STEP_FUNCTIONS_ARN, DYNAMODB_TABLE
 
 
 class PatchOrchestrator:

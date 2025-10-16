@@ -1,7 +1,10 @@
 import os
-from dotenv import load_dotenv
-
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except:
+    # dotenv not available in Lambda environment
+    pass
 
 # AWS Configuration
 AWS_REGION = os.getenv("AWS_REGION", "us-east-2")

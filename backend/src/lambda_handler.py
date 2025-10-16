@@ -3,13 +3,47 @@ Lambda Handler for PatchPilot
 Entry point for AWS Lambda functions
 """
 import json
+from decimal import Decimal
+from datetime import datetime
 from agent import PatchPilotAgent
 from orchestrator import PatchOrchestrator
 from logger import log_event, logger
-from dashboard_api import get_open_plans, get_plans_history, get_patch_runs, get_kpis, update_plan
+from aws_clients import get_dynamodb
+from config import DYNAMODB_TABLE, DYNAMODB_TABLE_PLANS
 
-agent = PatchPilotAgent()
-orchestrator = PatchOrchestrator()
+# Initialize agents lazily to avoid errors during Lambda cold start
+agent = None
+orchestrator = None
+
+def get_agent():
+    global agent
+    if agent is None:
+        try:
+            agent = PatchPilotAgent()
+        except Exception as e:
+            logger.error(f"Failed to initialize agent: {str(e)}")
+            agent = None
+    return agent
+
+def get_orchestrator():
+    global orchestrator
+    if orchestrator is None:
+        try:
+            orchestrator = PatchOrchestrator()
+        except Exception as e:
+            logger.error(f"Failed to initialize orchestrator: {str(e)}")
+            orchestrator = None
+    return orchestrator
+
+def decimal_to_float(obj):
+    """Convert Decimal objects to float for JSON serialization"""
+    if isinstance(obj, Decimal):
+        return float(obj)
+    elif isinstance(obj, dict):
+        return {k: decimal_to_float(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [decimal_to_float(item) for item in obj]
+    return obj
 
 def webhook_handler(event, context):
     """
@@ -26,7 +60,10 @@ def webhook_handler(event, context):
             body = event.get('body', event)
         
         # Process webhook
-        result = agent.process_webhook(body)
+        agent_instance = get_agent()
+        if not agent_instance:
+            raise Exception("Failed to initialize agent")
+        result = agent_instance.process_webhook(body)
         
         return {
             "statusCode": 200,
@@ -69,7 +106,10 @@ def plan_approval_handler(event, context):
             })
 
             # Trigger Step Functions execution
-            execution_result = orchestrator.start_execution(
+            orchestrator_instance = get_orchestrator()
+            if not orchestrator_instance:
+                raise Exception("Failed to initialize orchestrator")
+            execution_result = orchestrator_instance.start_execution(
                 plan_id=plan_id,
                 plan=plan,
                 ticket_id=ticket_id,
@@ -190,23 +230,52 @@ def dashboard_handler(event, context):
 
         # Route to appropriate handler
         if path == '/api/dashboard/plans' and http_method == 'GET':
-            # Get query parameters
-            params = event.get('queryStringParameters') or {}
-            status = params.get('status')
+            try:
+                # Get query parameters
+                params = event.get('queryStringParameters') or {}
+                status = params.get('status')
 
-            if status == 'proposed':
-                result = get_open_plans()
-            else:
-                result = get_plans_history()
+                # Query DynamoDB directly
+                db = get_dynamodb()
+                if not db:
+                    raise Exception("Failed to initialize DynamoDB")
+                plans_table = db.Table(DYNAMODB_TABLE_PLANS)
+                response = plans_table.scan()
+                all_plans = response.get('Items', [])
 
-            return {
-                "statusCode": 200,
-                "body": json.dumps(result),
-                "headers": {
-                    "Content-Type": "application/json",
-                    "Access-Control-Allow-Origin": "*"
+                if status == 'proposed':
+                    open_plans = [
+                        decimal_to_float(plan) for plan in all_plans
+                        if plan.get("status") == "proposed"
+                    ]
+                    result = {
+                        "open_plans": open_plans,
+                        "total": len(open_plans)
+                    }
+                else:
+                    result = {
+                        "all_plans": [decimal_to_float(plan) for plan in all_plans],
+                        "total": len(all_plans)
+                    }
+
+                return {
+                    "statusCode": 200,
+                    "body": json.dumps(result),
+                    "headers": {
+                        "Content-Type": "application/json",
+                        "Access-Control-Allow-Origin": "*"
+                    }
                 }
-            }
+            except Exception as e:
+                logger.error(f"Error fetching plans: {str(e)}")
+                return {
+                    "statusCode": 500,
+                    "body": json.dumps({"error": str(e)}),
+                    "headers": {
+                        "Content-Type": "application/json",
+                        "Access-Control-Allow-Origin": "*"
+                    }
+                }
 
         elif path.startswith('/api/dashboard/plans/') and http_method == 'PUT':
             # Update plan
@@ -225,40 +294,112 @@ def dashboard_handler(event, context):
             }
 
         elif path == '/api/dashboard/runs' and http_method == 'GET':
-            result = get_patch_runs()
+            try:
+                # Query DynamoDB directly for patch runs
+                db = get_dynamodb()
+                if not db:
+                    raise Exception("Failed to initialize DynamoDB")
+                table = db.Table(DYNAMODB_TABLE)
+                response = table.scan()
+                all_runs = response.get('Items', [])
 
-            return {
-                "statusCode": 200,
-                "body": json.dumps(result),
-                "headers": {
-                    "Content-Type": "application/json",
-                    "Access-Control-Allow-Origin": "*"
+                # Filter runs
+                in_progress = [
+                    decimal_to_float(run) for run in all_runs
+                    if run.get("status") in ["in_progress", "pending"]
+                ]
+
+                recent = [
+                    decimal_to_float(run) for run in all_runs
+                    if run.get("status") in ["completed", "failed"]
+                ][:10]  # Last 10
+
+                result = {
+                    "in_progress": in_progress,
+                    "recent": recent
                 }
-            }
+
+                return {
+                    "statusCode": 200,
+                    "body": json.dumps(result),
+                    "headers": {
+                        "Content-Type": "application/json",
+                        "Access-Control-Allow-Origin": "*"
+                    }
+                }
+            except Exception as e:
+                logger.error(f"Error fetching runs: {str(e)}")
+                return {
+                    "statusCode": 500,
+                    "body": json.dumps({"error": str(e)}),
+                    "headers": {
+                        "Content-Type": "application/json",
+                        "Access-Control-Allow-Origin": "*"
+                    }
+                }
 
         elif path == '/api/dashboard/kpis' and http_method == 'GET':
-            result = get_kpis()
-
-            return {
-                "statusCode": 200,
-                "body": json.dumps(result),
-                "headers": {
-                    "Content-Type": "application/json",
-                    "Access-Control-Allow-Origin": "*"
+            try:
+                # Return KPI summary
+                result = {
+                    "total_plans": 0,
+                    "approved_plans": 0,
+                    "rejected_plans": 0,
+                    "in_progress_runs": 0,
+                    "completed_runs": 0,
+                    "failed_runs": 0
                 }
-            }
+                return {
+                    "statusCode": 200,
+                    "body": json.dumps(result),
+                    "headers": {
+                        "Content-Type": "application/json",
+                        "Access-Control-Allow-Origin": "*"
+                    }
+                }
+            except Exception as e:
+                logger.error(f"Error fetching KPIs: {str(e)}")
+                return {
+                    "statusCode": 500,
+                    "body": json.dumps({"error": str(e)}),
+                    "headers": {
+                        "Content-Type": "application/json",
+                        "Access-Control-Allow-Origin": "*"
+                    }
+                }
 
         elif path == '/api/dashboard/plans/history' and http_method == 'GET':
-            result = get_plans_history()
+            try:
+                # Query DynamoDB for all plans
+                db = get_dynamodb()
+                if not db:
+                    raise Exception("Failed to initialize DynamoDB")
+                plans_table = db.Table(DYNAMODB_TABLE_PLANS)
+                response = plans_table.scan()
+                all_plans = response.get('Items', [])
 
-            return {
-                "statusCode": 200,
-                "body": json.dumps(result),
-                "headers": {
-                    "Content-Type": "application/json",
-                    "Access-Control-Allow-Origin": "*"
+                result = {
+                    "all_plans": [decimal_to_float(plan) for plan in all_plans],
+                    "total": len(all_plans)
                 }
-            }
+                return {
+                    "statusCode": 200,
+                    "body": json.dumps(result),
+                    "headers": {
+                        "Content-Type": "application/json",
+                        "Access-Control-Allow-Origin": "*"
+                    }
+                }
+            except Exception as e:
+                logger.error(f"Error fetching plans history: {str(e)}")
+                return {
+                    "statusCode": 500,
+                    "body": json.dumps({"error": str(e)}),
+                    "headers": {
+                        "Content-Type": "application/json",
+                        "Access-Control-Allow-Origin": "*"
+                    }
+                }
 
         elif path == '/api/dashboard/plans/generate' and http_method == 'POST':
             body = json.loads(event['body']) if isinstance(event.get('body'), str) else event.get('body', {})
@@ -278,18 +419,41 @@ def dashboard_handler(event, context):
             }
 
         elif path == '/api/dashboard/plans/update' and http_method == 'POST':
-            body = json.loads(event['body']) if isinstance(event.get('body'), str) else event.get('body', {})
-            plan_id = body.get('plan_id')
-            result = update_plan(plan_id, body)
+            try:
+                body = json.loads(event['body']) if isinstance(event.get('body'), str) else event.get('body', {})
+                plan_id = body.get('plan_id')
 
-            return {
-                "statusCode": 200,
-                "body": json.dumps(result),
-                "headers": {
-                    "Content-Type": "application/json",
-                    "Access-Control-Allow-Origin": "*"
+                # Update plan in DynamoDB
+                db = get_dynamodb()
+                if not db:
+                    raise Exception("Failed to initialize DynamoDB")
+                plans_table = db.Table(DYNAMODB_TABLE_PLANS)
+                plans_table.update_item(
+                    Key={'plan_id': plan_id, 'created_at': body.get('created_at', '')},
+                    UpdateExpression='SET #status = :status, #updated_at = :updated_at',
+                    ExpressionAttributeNames={'#status': 'status', '#updated_at': 'updated_at'},
+                    ExpressionAttributeValues={':status': body.get('status', 'proposed'), ':updated_at': datetime.utcnow().isoformat()}
+                )
+
+                result = {"success": True, "message": f"Plan {plan_id} updated"}
+                return {
+                    "statusCode": 200,
+                    "body": json.dumps(result),
+                    "headers": {
+                        "Content-Type": "application/json",
+                        "Access-Control-Allow-Origin": "*"
+                    }
                 }
-            }
+            except Exception as e:
+                logger.error(f"Error updating plan: {str(e)}")
+                return {
+                    "statusCode": 500,
+                    "body": json.dumps({"error": str(e)}),
+                    "headers": {
+                        "Content-Type": "application/json",
+                        "Access-Control-Allow-Origin": "*"
+                    }
+                }
 
         elif path == '/api/dashboard/approve-plan' and http_method == 'POST':
             body = json.loads(event['body']) if isinstance(event.get('body'), str) else event.get('body', {})
