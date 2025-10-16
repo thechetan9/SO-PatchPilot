@@ -59,6 +59,14 @@ export default function RunsView() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-red-400">Error: {error}</div>
+      </div>
+    );
+  }
+
   const renderBatchStatus = (batch: BatchProgress) => {
     const percentage = (batch.successful / batch.devices) * 100;
     return (

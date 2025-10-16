@@ -485,7 +485,7 @@ export default function PlansView() {
       {plans.length === 0 ? (
         <div className="text-center py-12 text-slate-400">
           <p className="text-lg">No open plans</p>
-          <p className="text-sm mt-2">Click "Generate New Plan" to create one</p>
+          <p className="text-sm mt-2">Click &quot;Generate New Plan&quot; to create one</p>
         </div>
       ) : (
         plans.map((plan) => (
