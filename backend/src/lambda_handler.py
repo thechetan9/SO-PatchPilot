@@ -520,40 +520,102 @@ def dashboard_handler(event, context):
                 }
 
         elif path == '/api/dashboard/approve-plan' and http_method == 'POST':
-            body = json.loads(event['body']) if isinstance(event.get('body'), str) else event.get('body', {})
-            plan_id = body.get('plan_id')
-            # For now, return a mock response - implement actual approval logic
-            result = {
-                "success": True,
-                "message": f"Plan {plan_id} approved"
-            }
+            try:
+                body = json.loads(event['body']) if isinstance(event.get('body'), str) else event.get('body', {})
+                plan_id = body.get('plan_id')
+                approved_by = body.get('approved_by', 'user@company.com')
 
-            return {
-                "statusCode": 200,
-                "body": json.dumps(result),
-                "headers": {
-                    "Content-Type": "application/json",
-                    "Access-Control-Allow-Origin": "*"
+                # Update plan status in DynamoDB
+                db = get_dynamodb()
+                if not db:
+                    raise Exception("Failed to initialize DynamoDB")
+                plans_table = db.Table(DYNAMODB_TABLE_PLANS)
+
+                # Update the plan
+                plans_table.update_item(
+                    Key={'plan_id': plan_id},
+                    UpdateExpression='SET #status = :status, approved_at = :approved_at, approved_by = :approved_by',
+                    ExpressionAttributeNames={'#status': 'status'},
+                    ExpressionAttributeValues={
+                        ':status': 'approved',
+                        ':approved_at': datetime.utcnow().isoformat(),
+                        ':approved_by': approved_by
+                    }
+                )
+
+                logger.info(f"Plan approved: {plan_id} by {approved_by}")
+
+                return {
+                    "statusCode": 200,
+                    "body": json.dumps({
+                        "success": True,
+                        "message": f"Plan {plan_id} approved and ready for execution"
+                    }),
+                    "headers": {
+                        "Content-Type": "application/json",
+                        "Access-Control-Allow-Origin": "*"
+                    }
                 }
-            }
+            except Exception as e:
+                logger.error(f"Error approving plan: {str(e)}")
+                return {
+                    "statusCode": 500,
+                    "body": json.dumps({"error": str(e)}),
+                    "headers": {
+                        "Content-Type": "application/json",
+                        "Access-Control-Allow-Origin": "*"
+                    }
+                }
 
         elif path == '/api/dashboard/reject-plan' and http_method == 'POST':
-            body = json.loads(event['body']) if isinstance(event.get('body'), str) else event.get('body', {})
-            plan_id = body.get('plan_id')
-            # For now, return a mock response - implement actual rejection logic
-            result = {
-                "success": True,
-                "message": f"Plan {plan_id} rejected"
-            }
+            try:
+                body = json.loads(event['body']) if isinstance(event.get('body'), str) else event.get('body', {})
+                plan_id = body.get('plan_id')
+                rejected_by = body.get('rejected_by', 'user@company.com')
+                reason = body.get('reason', 'No reason provided')
 
-            return {
-                "statusCode": 200,
-                "body": json.dumps(result),
-                "headers": {
-                    "Content-Type": "application/json",
-                    "Access-Control-Allow-Origin": "*"
+                # Update plan status in DynamoDB
+                db = get_dynamodb()
+                if not db:
+                    raise Exception("Failed to initialize DynamoDB")
+                plans_table = db.Table(DYNAMODB_TABLE_PLANS)
+
+                # Update the plan
+                plans_table.update_item(
+                    Key={'plan_id': plan_id},
+                    UpdateExpression='SET #status = :status, rejected_at = :rejected_at, rejected_by = :rejected_by, rejection_reason = :reason',
+                    ExpressionAttributeNames={'#status': 'status'},
+                    ExpressionAttributeValues={
+                        ':status': 'rejected',
+                        ':rejected_at': datetime.utcnow().isoformat(),
+                        ':rejected_by': rejected_by,
+                        ':reason': reason
+                    }
+                )
+
+                logger.info(f"Plan rejected: {plan_id} by {rejected_by}")
+
+                return {
+                    "statusCode": 200,
+                    "body": json.dumps({
+                        "success": True,
+                        "message": f"Plan {plan_id} rejected"
+                    }),
+                    "headers": {
+                        "Content-Type": "application/json",
+                        "Access-Control-Allow-Origin": "*"
+                    }
                 }
-            }
+            except Exception as e:
+                logger.error(f"Error rejecting plan: {str(e)}")
+                return {
+                    "statusCode": 500,
+                    "body": json.dumps({"error": str(e)}),
+                    "headers": {
+                        "Content-Type": "application/json",
+                        "Access-Control-Allow-Origin": "*"
+                    }
+                }
 
         else:
             return {
