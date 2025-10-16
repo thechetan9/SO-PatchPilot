@@ -5,9 +5,9 @@ Provides endpoints for dashboard UI to display plans, runs, and KPIs
 from flask import Blueprint, jsonify, request
 from datetime import datetime, timedelta
 from decimal import Decimal
-from aws_clients import get_dynamodb_resource
-from logger import log_event, logger
-from config import DYNAMODB_TABLE, DYNAMODB_TABLE_PLANS
+from src.aws_clients import get_dynamodb_resource
+from src.logger import log_event, logger
+from src.config import DYNAMODB_TABLE, DYNAMODB_TABLE_PLANS
 
 dashboard_bp = Blueprint('dashboard', __name__, url_prefix='/api/dashboard')
 
