@@ -6,12 +6,13 @@ Globals:
   Function:
     Timeout: 300
     MemorySize: 512
-    Runtime: python3.9
+    Runtime: python3.12
     Environment:
       Variables:
-        AWS_REGION: !Ref AWS::Region
-        DYNAMODB_TABLE_PATCH_RUNS: !Ref PatchRunsTable
-        DYNAMODB_TABLE_PLANS: !Ref PatchPlansTable
+        DYNAMODB_TABLE_PATCH_RUNS: !Sub 'PatchRuns-${Environment}'
+        DYNAMODB_TABLE_PLANS: !Sub 'PatchPlans-${Environment}'
+        DYNAMODB_TABLE: !Sub 'PatchPilotExecutions-${Environment}'
+        BEDROCK_MODEL_ID: us.anthropic.claude-3-5-haiku-20241022-v1:0
 
 Parameters:
   Environment:
@@ -23,48 +24,8 @@ Parameters:
       - prod
 
 Resources:
-  # DynamoDB Tables
-  PatchRunsTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: !Sub 'PatchRuns-${Environment}'
-      BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions:
-        - AttributeName: patch_run_id
-          AttributeType: S
-        - AttributeName: created_at
-          AttributeType: S
-      KeySchema:
-        - AttributeName: patch_run_id
-          KeyType: HASH
-        - AttributeName: created_at
-          KeyType: RANGE
-      StreamSpecification:
-        StreamViewType: NEW_AND_OLD_IMAGES
-      Tags:
-        - Key: Environment
-          Value: !Ref Environment
-
-  PatchPlansTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: !Sub 'PatchPlans-${Environment}'
-      BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions:
-        - AttributeName: plan_id
-          AttributeType: S
-        - AttributeName: created_at
-          AttributeType: S
-      KeySchema:
-        - AttributeName: plan_id
-          KeyType: HASH
-        - AttributeName: created_at
-          KeyType: RANGE
-      StreamSpecification:
-        StreamViewType: NEW_AND_OLD_IMAGES
-      Tags:
-        - Key: Environment
-          Value: !Ref Environment
+  # DynamoDB Tables (already exist - created manually)
+  # Using existing tables: PatchRuns-dev, PatchPlans-dev, PatchPilotExecutions-dev
 
   # Lambda Execution Role
   LambdaExecutionRole:
@@ -92,8 +53,9 @@ Resources:
                   - dynamodb:Query
                   - dynamodb:Scan
                 Resource:
-                  - !GetAtt PatchRunsTable.Arn
-                  - !GetAtt PatchPlansTable.Arn
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/PatchRuns-${Environment}'
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/PatchPlans-${Environment}'
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/PatchPilotExecutions-${Environment}'
         - PolicyName: BedrockAccess
           PolicyDocument:
             Version: '2012-10-17'
@@ -196,35 +158,30 @@ Resources:
     Properties:
       Name: !Sub 'patchpilot-api-${Environment}'
       StageName: !Ref Environment
-      TracingEnabled: true
-      MethodSettings:
-        - ResourcePath: '/*'
-          HttpMethod: '*'
-          LoggingLevel: INFO
-          DataTraceEnabled: true
-          MetricsEnabled: true
-
-  # CloudWatch Log Group
-  ApiLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub '/aws/apigateway/patchpilot-${Environment}'
-      RetentionInDays: 30
+      TracingEnabled: false
+      Cors:
+        AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        AllowOrigin: "'*'"
 
 Outputs:
   WebhookUrl:
     Description: Webhook endpoint URL
     Value: !Sub 'https://${PatchPilotApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/webhook/superops'
-  
+
   PlanApprovalUrl:
     Description: Plan approval endpoint URL
     Value: !Sub 'https://${PatchPilotApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/plan/approve'
-  
+
+  DashboardApiUrl:
+    Description: Dashboard API endpoint URL
+    Value: !Sub 'https://${PatchPilotApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/api/dashboard'
+
   PatchRunsTableName:
-    Description: DynamoDB table for patch runs
-    Value: !Ref PatchRunsTable
-  
+    Description: DynamoDB table for patch runs (existing)
+    Value: !Sub 'PatchRuns-${Environment}'
+
   PatchPlansTableName:
-    Description: DynamoDB table for patch plans
-    Value: !Ref PatchPlansTable
+    Description: DynamoDB table for patch plans (existing)
+    Value: !Sub 'PatchPlans-${Environment}'
 
