@@ -2,11 +2,16 @@
 Flask API for PatchPilot
 Local testing and development
 """
+import sys
+import os
+# Add src directory to path so imports work the same as in Lambda
+sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from src.agent import PatchPilotAgent
-from src.dashboard_api import dashboard_bp
-from src.logger import log_event, logger
+from agent import PatchPilotAgent
+from dashboard_api import dashboard_bp
+from logger import log_event, logger
 import json
 
 app = Flask(__name__)
