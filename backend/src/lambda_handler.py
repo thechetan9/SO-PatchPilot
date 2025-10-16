@@ -408,21 +408,61 @@ def dashboard_handler(event, context):
                 }
 
         elif path == '/api/dashboard/plans/generate' and http_method == 'POST':
-            body = json.loads(event['body']) if isinstance(event.get('body'), str) else event.get('body', {})
-            # For now, return a mock response - you can implement actual plan generation
-            result = {
-                "success": True,
-                "message": "Plan generation endpoint - implement with your logic"
-            }
+            try:
+                body = json.loads(event['body']) if isinstance(event.get('body'), str) else event.get('body', {})
 
-            return {
-                "statusCode": 200,
-                "body": json.dumps(result),
-                "headers": {
-                    "Content-Type": "application/json",
-                    "Access-Control-Allow-Origin": "*"
+                # Generate unique plan ID using timestamp
+                import time
+                plan_id = f"PLAN-{time.time()}"
+
+                # Create new plan with data from request
+                new_plan = {
+                    "plan_id": plan_id,
+                    "client_id": body.get("client_id", "client-a"),
+                    "ticket_id": body.get("ticket_id", f"TICKET-{int(time.time())}"),
+                    "created_at": datetime.utcnow().isoformat(),
+                    "status": "proposed",  # Use "proposed" to match existing plans
+                    "canary_size": Decimal(str(body.get("canary_size", 5))),
+                    "batches": [Decimal(str(b)) for b in body.get("batches", [30, 30])],
+                    "estimated_duration_hours": Decimal(str(body.get("estimated_duration_hours", 6))),
+                    "device_count": body.get("device_count", 65),
+                    "strategy": body.get("strategy", "canary_then_batch"),
+                    "patches": body.get("patches", 0),
+                    "health_check_interval_minutes": Decimal(str(body.get("health_check_interval_minutes", 10))),
+                    "rollback_threshold_percent": Decimal(str(body.get("rollback_threshold_percent", 5))),
+                    "notes": body.get("notes", "Generated via dashboard")
                 }
-            }
+
+                # Save to DynamoDB
+                db = get_dynamodb()
+                if not db:
+                    raise Exception("Failed to initialize DynamoDB")
+                plans_table = db.Table(DYNAMODB_TABLE_PLANS)
+                plans_table.put_item(Item=new_plan)
+
+                logger.info(f"Plan generated: {plan_id}")
+
+                return {
+                    "statusCode": 201,
+                    "body": json.dumps({
+                        "status": "created",
+                        "plan": decimal_to_float(new_plan)
+                    }),
+                    "headers": {
+                        "Content-Type": "application/json",
+                        "Access-Control-Allow-Origin": "*"
+                    }
+                }
+            except Exception as e:
+                logger.error(f"Error generating plan: {str(e)}")
+                return {
+                    "statusCode": 500,
+                    "body": json.dumps({"error": str(e)}),
+                    "headers": {
+                        "Content-Type": "application/json",
+                        "Access-Control-Allow-Origin": "*"
+                    }
+                }
 
         elif path == '/api/dashboard/plans/update' and http_method == 'POST':
             try:
