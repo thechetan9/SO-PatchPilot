@@ -40,7 +40,7 @@ export default function PlansView() {
   const fetchPlans = async () => {
     try {
       setLoading(true);
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://byeh9xee0k.execute-api.us-east-1.amazonaws.com/dev';
       const response = await fetch(`${apiUrl}/api/dashboard/plans?status=proposed`);
       if (!response.ok) throw new Error('Failed to fetch plans');
       const data = await response.json();
@@ -54,7 +54,7 @@ export default function PlansView() {
 
   const handleApprove = async (planId: string) => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://byeh9xee0k.execute-api.us-east-1.amazonaws.com/dev';
       const response = await fetch(`${apiUrl}/api/dashboard/approve-plan`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -70,7 +70,7 @@ export default function PlansView() {
 
   const handleReject = async (planId: string) => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://byeh9xee0k.execute-api.us-east-1.amazonaws.com/dev';
       const response = await fetch(`${apiUrl}/api/dashboard/reject-plan`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -87,7 +87,7 @@ export default function PlansView() {
   const generateNewPlan = async () => {
     setGenerating(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://byeh9xee0k.execute-api.us-east-1.amazonaws.com/dev';
       const response = await fetch(`${apiUrl}/api/dashboard/plans/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -112,7 +112,7 @@ export default function PlansView() {
 
   const fetchHistory = async () => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://byeh9xee0k.execute-api.us-east-1.amazonaws.com/dev';
       const response = await fetch(`${apiUrl}/api/dashboard/plans/history`);
       if (!response.ok) throw new Error('Failed to fetch history');
       const data = await response.json();
@@ -134,7 +134,7 @@ export default function PlansView() {
     if (!editedPlan) return;
     try {
       // Update the plan in the backend
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://byeh9xee0k.execute-api.us-east-1.amazonaws.com/dev';
       const response = await fetch(`${apiUrl}/api/dashboard/plans/update`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -166,7 +166,7 @@ export default function PlansView() {
     if (!selectedPlan) return;
     setGenerating(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://byeh9xee0k.execute-api.us-east-1.amazonaws.com/dev';
       const response = await fetch(`${apiUrl}/api/dashboard/plans/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
