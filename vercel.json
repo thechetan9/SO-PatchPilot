@@ -1,0 +1,9 @@
+{
+  "env": {
+    "NEXT_PUBLIC_API_URL": "https://byeh9xee0k.execute-api.us-east-1.amazonaws.com/dev"
+  },
+  "buildCommand": "cd frontend && npm run build",
+  "outputDirectory": "frontend/.next",
+  "rootDirectory": "frontend"
+}
+
