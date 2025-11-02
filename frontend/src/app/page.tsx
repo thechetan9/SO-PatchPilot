@@ -1,6 +1,6 @@
 'use client';
-// Force rebuild - v2
-import { useState } from 'react';
+// Force rebuild - v3 with logging
+import { useState, useEffect } from 'react';
 import DashboardHeader from '@/components/DashboardHeader';
 import PlansView from '@/components/PlansView';
 import RunsView from '@/components/RunsView';
@@ -10,6 +10,14 @@ type TabType = 'plans' | 'runs' | 'kpis';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<TabType>('plans');
+
+  useEffect(() => {
+    console.log('='.repeat(80));
+    console.log('🚀 PatchPilot Dashboard Loaded');
+    console.log('📅 Build Version: v3 - ' + new Date().toISOString());
+    console.log('🌐 API Base URL: https://byeh9xee0k.execute-api.us-east-1.amazonaws.com/dev');
+    console.log('='.repeat(80));
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">

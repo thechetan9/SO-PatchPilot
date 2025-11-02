@@ -39,12 +39,20 @@ export default function RunsView() {
   const fetchRuns = async () => {
     try {
       setLoading(true);
-      const response = await fetch('https://byeh9xee0k.execute-api.us-east-1.amazonaws.com/dev/api/dashboard/runs');
+      const apiUrl = 'https://byeh9xee0k.execute-api.us-east-1.amazonaws.com/dev/api/dashboard/runs';
+      console.log('[RunsView] Fetching runs from:', apiUrl);
+      console.log('[RunsView] Timestamp:', new Date().toISOString());
+
+      const response = await fetch(apiUrl);
+      console.log('[RunsView] Response status:', response.status);
+
       if (!response.ok) throw new Error('Failed to fetch runs');
       const data = await response.json();
+      console.log('[RunsView] Data received:', data);
       setInProgress(data.in_progress || []);
       setRecent(data.recent || []);
     } catch (err) {
+      console.error('[RunsView] Error fetching runs:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setLoading(false);

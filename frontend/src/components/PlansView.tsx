@@ -40,11 +40,18 @@ export default function PlansView() {
   const fetchPlans = async () => {
     try {
       setLoading(true);
-      const response = await fetch('https://byeh9xee0k.execute-api.us-east-1.amazonaws.com/dev/api/dashboard/plans?status=proposed');
+      const apiUrl = 'https://byeh9xee0k.execute-api.us-east-1.amazonaws.com/dev/api/dashboard/plans?status=proposed';
+      console.log('[PlansView] Fetching plans from:', apiUrl);
+
+      const response = await fetch(apiUrl);
+      console.log('[PlansView] Fetch Plans - Response status:', response.status);
+
       if (!response.ok) throw new Error('Failed to fetch plans');
       const data = await response.json();
+      console.log('[PlansView] Fetch Plans - Data received:', data);
       setPlans(data.open_plans || []);
     } catch (err) {
+      console.error('[PlansView] Fetch Plans - Error:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setLoading(false);
@@ -84,22 +91,41 @@ export default function PlansView() {
   const generateNewPlan = async () => {
     setGenerating(true);
     try {
-      const response = await fetch('https://byeh9xee0k.execute-api.us-east-1.amazonaws.com/dev/api/dashboard/plans/generate', {
+      const apiUrl = 'https://byeh9xee0k.execute-api.us-east-1.amazonaws.com/dev/api/dashboard/plans/generate';
+      console.log('[PlansView] Generate Plan - URL:', apiUrl);
+      console.log('[PlansView] Generate Plan - Timestamp:', new Date().toISOString());
+
+      const payload = {
+        client_id: 'client-a',
+        canary_size: 5,
+        batches: [30, 30],
+        estimated_duration_hours: 6,
+        device_count: 65,
+        patches: 0,
+      };
+      console.log('[PlansView] Generate Plan - Payload:', payload);
+
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          client_id: 'client-a',
-          canary_size: 5,
-          batches: [30, 30],
-          estimated_duration_hours: 6,
-          device_count: 65,
-          patches: 0,
-        }),
+        body: JSON.stringify(payload),
       });
-      if (!response.ok) throw new Error('Failed to generate plan');
+
+      console.log('[PlansView] Generate Plan - Response status:', response.status);
+      console.log('[PlansView] Generate Plan - Response ok:', response.ok);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[PlansView] Generate Plan - Error response:', errorText);
+        throw new Error('Failed to generate plan');
+      }
+
+      const data = await response.json();
+      console.log('[PlansView] Generate Plan - Success:', data);
       alert('✓ New plan generated!');
       fetchPlans();
     } catch (err) {
+      console.error('[PlansView] Generate Plan - Error:', err);
       alert(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setGenerating(false);

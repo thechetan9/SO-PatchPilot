@@ -34,11 +34,20 @@ export default function KPIView() {
   const fetchKPIs = async () => {
     try {
       setLoading(true);
-      const response = await fetch('https://byeh9xee0k.execute-api.us-east-1.amazonaws.com/dev/api/dashboard/kpis');
+      const apiUrl = 'https://byeh9xee0k.execute-api.us-east-1.amazonaws.com/dev/api/dashboard/kpis';
+      console.log('[KPIView] Fetching KPIs from:', apiUrl);
+      console.log('[KPIView] Timestamp:', new Date().toISOString());
+
+      const response = await fetch(apiUrl);
+      console.log('[KPIView] Response status:', response.status);
+      console.log('[KPIView] Response ok:', response.ok);
+
       if (!response.ok) throw new Error('Failed to fetch KPIs');
       const data = await response.json();
+      console.log('[KPIView] Data received:', data);
       setKpis(data);
     } catch (err) {
+      console.error('[KPIView] Error fetching KPIs:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setLoading(false);
