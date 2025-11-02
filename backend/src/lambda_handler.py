@@ -52,34 +52,40 @@ def webhook_handler(event, context):
     """
     try:
         logger.info(f"Webhook received: {json.dumps(event)}")
-        
+
         # Parse webhook payload
         if isinstance(event.get('body'), str):
             body = json.loads(event['body'])
         else:
             body = event.get('body', event)
-        
+
         # Process webhook
         agent_instance = get_agent()
         if not agent_instance:
             raise Exception("Failed to initialize agent")
         result = agent_instance.process_webhook(body)
-        
+
         return {
             "statusCode": 200,
             "body": json.dumps(result),
             "headers": {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
             }
         }
-    
+
     except Exception as e:
         logger.error(f"Error processing webhook: {str(e)}")
         return {
             "statusCode": 500,
             "body": json.dumps({"error": str(e)}),
             "headers": {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
             }
         }
 
@@ -123,7 +129,13 @@ def plan_approval_handler(event, context):
                     "plan_id": plan_id,
                     "execution_arn": execution_result.get("execution_arn"),
                     "message": "Plan approved, execution started"
-                })
+                }),
+                "headers": {
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+                    "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
+                }
             }
         else:
             log_event("plan_rejected", {
@@ -136,14 +148,26 @@ def plan_approval_handler(event, context):
                     "status": "rejected",
                     "plan_id": plan_id,
                     "message": "Plan rejected"
-                })
+                }),
+                "headers": {
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+                    "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
+                }
             }
 
     except Exception as e:
         logger.error(f"Error processing plan approval: {str(e)}")
         return {
             "statusCode": 500,
-            "body": json.dumps({"error": str(e)})
+            "body": json.dumps({"error": str(e)}),
+            "headers": {
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
+            }
         }
 
 def health_check_handler(event, context):
@@ -165,6 +189,16 @@ def health_check_handler(event, context):
             device_ids=device_ids,
             health_threshold_percent=health_threshold
         )
+
+        # Add CORS headers if this is an API call
+        if isinstance(health_result, dict) and 'statusCode' in health_result:
+            if 'headers' not in health_result:
+                health_result['headers'] = {}
+            health_result['headers'].update({
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
+            })
 
         return health_result
 
@@ -233,6 +267,37 @@ def dashboard_handler(event, context):
         # Get HTTP method and path
         http_method = event.get('httpMethod', 'GET')
         path = event.get('path', '')
+
+        # Handle CORS preflight requests
+        if http_method == 'OPTIONS':
+            return {
+                "statusCode": 200,
+                "body": json.dumps({"message": "OK"}),
+                "headers": {
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+                    "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+                    "Access-Control-Max-Age": "600"
+                }
+            }
+
+        # Handle health check endpoint
+        if path == '/health' and http_method == 'GET':
+            return {
+                "statusCode": 200,
+                "body": json.dumps({
+                    "status": "healthy",
+                    "service": "PatchPilot Dashboard API",
+                    "timestamp": datetime.now().isoformat()
+                }),
+                "headers": {
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+                    "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
+                }
+            }
 
         # Route to appropriate handler
         if path == '/api/dashboard/plans' and http_method == 'GET':

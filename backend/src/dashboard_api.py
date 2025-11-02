@@ -15,6 +15,10 @@ dynamodb = get_dynamodb_resource()
 table = dynamodb.Table(DYNAMODB_TABLE)
 plans_table = dynamodb.Table(DYNAMODB_TABLE_PLANS)
 
+# In-memory storage for local development
+_plan_counter = 0
+_all_plans = {}
+
 
 # Helper function to convert Decimal to float for JSON serialization
 def decimal_to_float(obj):
