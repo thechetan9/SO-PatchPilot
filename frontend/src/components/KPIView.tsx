@@ -34,9 +34,7 @@ export default function KPIView() {
   const fetchKPIs = async () => {
     try {
       setLoading(true);
-      // AWS API Gateway URL
-      const apiUrl = 'https://byeh9xee0k.execute-api.us-east-1.amazonaws.com/dev';
-      const response = await fetch(`${apiUrl}/api/dashboard/kpis`);
+      const response = await fetch('https://byeh9xee0k.execute-api.us-east-1.amazonaws.com/dev/api/dashboard/kpis');
       if (!response.ok) throw new Error('Failed to fetch KPIs');
       const data = await response.json();
       setKpis(data);
