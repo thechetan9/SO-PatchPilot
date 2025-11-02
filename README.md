@@ -8,6 +8,11 @@
 
 An AI-powered patch management system that uses AWS Bedrock (Claude) to intelligently orchestrate patch deployments across your infrastructure.
 
+## 🚀 Live Demo
+
+**Frontend Dashboard**: https://frontend-p3j6s21fk-thechetan9s-projects.vercel.app/
+**Backend API**: https://byeh9xee0k.execute-api.us-east-1.amazonaws.com/dev
+
 ## Features
 
 - **AI-Powered Planning**: Uses Claude 3.5 Haiku to generate intelligent patch plans
@@ -201,7 +206,9 @@ curl -X POST http://localhost:5000/webhook/superops \
 
 #### Test Frontend
 
-Open <http://localhost:3000> in your browser to see the dashboard.
+**Local Development**: Open <http://localhost:3000> in your browser to see the dashboard.
+
+**Live Production**: Visit the deployed dashboard at <https://frontend-p3j6s21fk-thechetan9s-projects.vercel.app/>
 
 ### Deploy to AWS
 

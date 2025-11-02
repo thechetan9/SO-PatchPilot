@@ -2,6 +2,16 @@
 
 Complete guide to deploy PatchPilot to AWS using Lambda + API Gateway (Serverless)
 
+## 🌐 **LIVE DEPLOYMENT**
+
+**The system is already deployed and operational!**
+
+- **Frontend Dashboard**: https://frontend-p3j6s21fk-thechetan9s-projects.vercel.app/
+- **Backend API**: https://byeh9xee0k.execute-api.us-east-1.amazonaws.com/dev
+- **GitHub Repository**: https://github.com/thechetan9/SO-PatchPilot
+
+This guide is for reference if you need to redeploy or make changes.
+
 ---
 
 ## 📋 **Prerequisites**

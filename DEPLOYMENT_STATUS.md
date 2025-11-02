@@ -1,5 +1,13 @@
 # 🚀 PatchPilot - Deployment Status
 
+## 🌐 **LIVE DEPLOYMENT**
+
+**Frontend Dashboard**: https://frontend-p3j6s21fk-thechetan9s-projects.vercel.app/
+**Backend API**: https://byeh9xee0k.execute-api.us-east-1.amazonaws.com/dev
+**GitHub Repository**: https://github.com/thechetan9/SO-PatchPilot
+
+---
+
 ## ✅ **COMPLETED TASKS**
 
 ### 1. **GitHub Deployment** ✅
@@ -9,14 +17,22 @@
 - ✅ Documentation files removed (keeping only README.md)
 - ✅ Clean commit history
 
-### 2. **AWS Lambda Deployment Preparation** ✅
-- ✅ AWS SAM CLI installed (version 1.145.1)
-- ✅ `template.yaml` updated with dashboard API endpoints
-- ✅ `lambda_handler.py` updated with dashboard handler
-- ✅ CORS support added for frontend integration
-- ✅ Comprehensive deployment guide created (`AWS_DEPLOYMENT_GUIDE.md`)
+### 2. **AWS Lambda Deployment** ✅
+- ✅ All 4 Lambda functions deployed and operational
+- ✅ API Gateway configured with CORS enabled
+- ✅ Authentication disabled for public access
+- ✅ DynamoDB tables connected and working
+- ✅ AWS Bedrock (Claude 3.5 Haiku) integrated
+- ✅ All API endpoints tested and verified
 
-### 3. **Local Development** ✅
+### 3. **Vercel Frontend Deployment** ✅
+- ✅ Frontend deployed to Vercel
+- ✅ Production URL: https://frontend-p3j6s21fk-thechetan9s-projects.vercel.app/
+- ✅ Connected to AWS API Gateway backend
+- ✅ All features working (KPIs, Plans, Runs, Generate Plan)
+- ✅ Comprehensive logging added for debugging
+
+### 4. **Local Development** ✅
 - ✅ Backend running with real AWS Bedrock (Claude 3.5 Haiku)
 - ✅ Frontend running with real data from DynamoDB
 - ✅ DynamoDB tables created (PatchPlans-dev, PatchRuns-dev, PatchPilotExecutions-dev)
@@ -25,96 +41,95 @@
 
 ---
 
-## 🎯 **NEXT STEPS - AWS Lambda Deployment**
+## 🎯 **DEPLOYMENT COMPLETE - SYSTEM OPERATIONAL**
 
-### **Option 1: Deploy Now (Recommended)**
+The PatchPilot system is now fully deployed and operational!
 
-Since you have AWS Academy credentials, we can deploy to AWS Lambda right now!
+### **Live System Architecture:**
 
-#### **Step 1: Verify AWS Credentials**
-
-```bash
-# Check if credentials are still valid
-aws sts get-caller-identity
+```
+Frontend (Vercel)
+https://frontend-p3j6s21fk-thechetan9s-projects.vercel.app/
+    ↓
+API Gateway
+https://byeh9xee0k.execute-api.us-east-1.amazonaws.com/dev
+    ↓
+Lambda Functions (4 functions)
+    ├─ patchpilot-dashboard-dev
+    ├─ patchpilot-webhook-dev
+    ├─ patchpilot-plan-approval-dev
+    └─ patchpilot-health-check-dev
+    ↓
+AWS Bedrock (Claude 3.5 Haiku)
+    ↓
+AWS DynamoDB (3 tables)
+    ├─ PatchPlans-dev
+    ├─ PatchRuns-dev
+    └─ PatchPilotExecutions-dev
 ```
 
-If expired, update `backend/.env` with fresh credentials from AWS Academy.
+### **Available Features:**
 
-#### **Step 2: Build the SAM Application**
-
-```bash
-# From project root
-sam build
-```
-
-This will package the backend code and dependencies.
-
-#### **Step 3: Deploy to AWS**
-
-```bash
-# First-time deployment (guided)
-sam deploy --guided
-```
-
-You'll be prompted for:
-- **Stack Name**: `patchpilot-stack`
-- **AWS Region**: `us-east-1`
-- **Parameter Environment**: `dev`
-- **Confirm changes before deploy**: `Y`
-- **Allow SAM CLI IAM role creation**: `Y`
-- **Save arguments to samconfig.toml**: `Y`
-
-#### **Step 4: Get API Gateway URL**
-
-After deployment, SAM will output:
-```
-Outputs:
-WebhookUrl: https://xxxxxxxxxx.execute-api.us-east-1.amazonaws.com/dev/webhook/superops
-DashboardApiUrl: https://xxxxxxxxxx.execute-api.us-east-1.amazonaws.com/dev/api/dashboard
-```
-
-**Save these URLs!**
-
-#### **Step 5: Update Frontend**
-
-Update `frontend/.env.local` (create if doesn't exist):
-```env
-NEXT_PUBLIC_API_URL=https://YOUR_API_GATEWAY_URL/dev
-```
-
-Then rebuild frontend:
-```bash
-cd frontend
-npm run build
-```
+1. **📊 KPIs & Analytics** - Real-time metrics and trends
+2. **📋 Patch Plans** - View, approve, reject, and manage plans
+3. **🚀 Patch Runs** - Monitor in-progress and completed executions
+4. **🤖 AI Plan Generation** - Generate new patch plans with Claude
+5. **✅ Plan Approval Workflow** - Approve/reject with tracking
+6. **📈 Success Rate Tracking** - Monitor patch success rates
 
 ---
 
-### **Option 2: Deploy Frontend to Vercel (Easiest)**
+## 📚 **How to Use the Live System**
 
-#### **Step 1: Install Vercel CLI**
+### **Option 1: Use the Web Dashboard (Easiest)**
+
+1. **Visit the Dashboard**: https://frontend-p3j6s21fk-thechetan9s-projects.vercel.app/
+2. **Open Browser Console** (F12) to see detailed logs
+3. **Navigate through tabs**:
+   - **📋 Open Plans** - View and manage patch plans
+   - **🚀 Patch Runs** - Monitor execution progress
+   - **📊 KPIs & Analytics** - View metrics and trends
+4. **Generate a new plan** - Click "Generate New Plan" button
+5. **Approve/Reject plans** - Use the action buttons on each plan
+
+### **Option 2: Use the API Directly**
+
+#### **Test KPIs Endpoint:**
 
 ```bash
-npm install -g vercel
+curl https://byeh9xee0k.execute-api.us-east-1.amazonaws.com/dev/api/dashboard/kpis
 ```
 
-#### **Step 2: Deploy**
+#### **Test Plans Endpoint:**
 
 ```bash
-cd frontend
-vercel
+curl https://byeh9xee0k.execute-api.us-east-1.amazonaws.com/dev/api/dashboard/plans
 ```
 
-#### **Step 3: Configure Environment Variables**
-
-In Vercel Dashboard:
-- Go to Project Settings → Environment Variables
-- Add: `NEXT_PUBLIC_API_URL` = `https://YOUR_API_GATEWAY_URL/dev`
-
-#### **Step 4: Redeploy**
+#### **Generate a New Plan:**
 
 ```bash
-vercel --prod
+curl -X POST https://byeh9xee0k.execute-api.us-east-1.amazonaws.com/dev/api/dashboard/plans/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "client_id": "client-a",
+    "canary_size": 5,
+    "batches": [30, 30],
+    "estimated_duration_hours": 6,
+    "device_count": 65,
+    "patches": 0
+  }'
+```
+
+#### **Approve a Plan:**
+
+```bash
+curl -X POST https://byeh9xee0k.execute-api.us-east-1.amazonaws.com/dev/api/dashboard/approve-plan \
+  -H "Content-Type: application/json" \
+  -d '{
+    "plan_id": "PLAN_ID_HERE",
+    "approved_by": "user@company.com"
+  }'
 ```
 
 ---
@@ -273,7 +288,9 @@ sam deploy --guided
 
 ---
 
-**Last Updated**: 2025-10-16  
-**Status**: ✅ Ready for AWS Lambda Deployment  
+**Last Updated**: 2025-11-02
+**Status**: ✅ **LIVE AND OPERATIONAL**
+**Frontend**: https://frontend-p3j6s21fk-thechetan9s-projects.vercel.app/
+**Backend API**: https://byeh9xee0k.execute-api.us-east-1.amazonaws.com/dev
 **GitHub**: https://github.com/thechetan9/SO-PatchPilot
 
